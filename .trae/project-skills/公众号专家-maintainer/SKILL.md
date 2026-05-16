@@ -3,254 +3,271 @@ name: "公众号专家-maintainer"
 description: "Maintains 公众号专家 project using Session-based Worktree + Branch model. Invoke for bug fixes, feature development, or system maintenance. Each session creates isolated worktree+branch, pushes to remote, user controls merge."
 ---
 
-# 公众号专家 Maintainer Skill (v1.0)
+# 公众号专家 Maintainer Skill (v2.0)
 
-## 🎯 核心理念
-
-### **Session-Based Development**
-- 每个 **Session** = 一个独立的 **Worktree** + **Git Branch**
-- Session 之间**完全隔离**，可并行开发
-- 每个 Session push 到**独立的远程分支**
-- **用户手动控制何时 merge 到 main**
-
-### **优势对比**
-
-| 维度 | 旧流程 (Auto-Merge) | 新流程 (Manual Merge) |
-|------|---------------------|----------------------|
-| **Branch管理** | 自动合并到main | 保留独立branch |
-| **回滚能力** | 需要revert commit | 直接删除/禁用merge |
-| **Code Review** | 已合并，难review | branch独立，可PR |
-| **并行开发** | 需要频繁处理冲突 | 各自branch，零冲突 |
-| **历史清晰度** | 线性历史 | 清晰的feature分支图 |
+> 最后更新：2026-05-16
+> **每次开始工作前必须先读此文件**
 
 ---
 
-## 📋 Session 命名规范
+## 🎯 项目速览
 
-### **Worktree 命令**: `wt-<session_type>-<short_desc>`
-
-| Session类型 | 前缀 | 示例 | 用途 |
-|-----------|------|------|------|
-| Bug修复 | `wt-fix-` | `wt-fix-login-error` | 修复问题 |
-| 新功能 | `wt-feat-` | `wt-feat-wechat-integration` | 开发新功能 |
-| 优化 | `wt-opt-` | `wt-opt-perf` | 性能优化 |
-| 实验 | `wt-exp-` | `wt-exp-new-arch` | 尝试性改动 |
-| 紧急 | `wt-hot-` | `wt-hot-critical-fix` | 紧急修复 |
-
-### **Branch 命令**: `<type>/<short_desc>`
-
-```
-fix/login-error       # 修复类
-feat/wechat-api       # 功能类
-opt/performance       # 优化类
-exp/new-architecture  # 实验类
-hot/security-fix      # 紧急类
-```
+| 项目 | 值 |
+|------|---|
+| 名称 | 公众号专家（GongZhongHao Expert） |
+| 定位 | 每日财经观察与量化样本学习工具 |
+| 技术栈 | Docker + Node.js 20 + TypeScript + PostgreSQL 16 + Nginx |
+| 部署服务器 | CentOS 8 @ `8.134.248.11` |
+| 项目用户 | `gongzhonghao` |
+| SSH Key | ed25519 (`gzh_expert_ed25519`) |
+| 项目目录(本地) | `Z:\代码\养龙虾\公众号专家` |
+| 项目目录(服务器) | `/home/gongzhonghao/apps/gzh-expert` |
 
 ---
 
-## 🔧 工作流程（6步）
+## 🏗️ 产品架构（三层）
 
-### **Step 1: 创建新 Session**
+### 第一层：公众号免费文章
 
-```powershell
-cd Z:\代码\养龙虾\公众号专家
+每天一篇，固定结构：
 
-# 格式: git worktree add ../wt-<type>-<desc> -b <branch_name>
-git worktree add ../wt-fix-login -b fix/login-error
+```
+标题：今日财经观察｜YYYY-MM-DD
+
+一、今日财经要点 10 条    ← AI 从公开信息生成
+二、今日市场观察           ← 宏观/板块/政策/海外/资金面
+三、今日学习笔记          ← 用户输入 + AI 整理（原创表达）
+四、风险提示             ← 固定模板
+五、小程序入口            → 引导查看量化样本观察
 ```
 
-**示例**:
-```powershell
-# Session A: 修复登录问题
-git worktree add ../wt-fix-login -b fix/login-error
+**关键规则**：
+- 财经要点来源：公开财经新闻源，中性表达，不预测涨跌
+- 学习笔记：不写"某某视频精华总结"，用自己语言重构
+- 禁止词：牛股、妖股、必涨、内幕、推荐买入、目标价等
 
-# Session B: 开发微信集成 (可同时进行)
-git worktree add ../wt-feat-wechat -b feat/wechat-integration
+### 第二层：小程序广告解锁
+
+页面标题：**今日量化样本观察**
+
+```
+以下名称由固定历史数据规则生成，仅作为学习样本展示。
+- 样本一
+- 样本二
+- 样本三
+[固定免责声明]
 ```
 
-### **Step 2: 在 Session 中开发**
+**关键规则**：
+- 只显示股票名称，不解释、不建议、不写理由、不写买卖点
+- 解锁方式：微信激励视频广告（或模拟模式）
+- 不叫"股票池"，统一叫"量化样本观察"
 
-```powershell
-# 进入 worktree 目录
-cd ../wt-fix-login
+### 第三层：知识库 / AI 助手（后期）
 
-# 正常开发、测试、提交...
-# 所有操作都在这个隔离的环境中进行
-git add .
-git commit -m "fix: 修复登录页面验证问题"
-```
-
-**关键点**:
-- ✅ 每个Session有独立的文件副本
-- ✅ 可以同时编辑同一文件的不同部分（不冲突）
-- ✅ 提交只影响当前branch
-
-### **Step 3: Push 到远程分支（不合并）**
-
-```powershell
-# 在 worktree 目录中执行
-cd ../wt-fix-login
-
-# Push 到同名远程分支
-git push origin fix/login-error
-
-# 或者使用 -u 设置upstream
-git push -u origin fix/login-error
-```
-
-**⚠️ 重要**: 
-- ❌ **不要** `git checkout main && git merge`
-- ✅ **只需** push 到远程，保留本地branch
-
-### **Step 4: 本地测试验证**
-
-```powershell
-# 在每个 worktree 中运行测试
-cd ../wt-fix-login
-# 运行该Session相关的测试
-```
-
-### **Step 5: 用户审查和决策**
-
-当所有 Session 完成开发并push后：
-
-```powershell
-# 查看所有远程分支
-git branch -r | Select-String -NotMatch "main"
-
-# 或使用GitHub UI查看所有分支
-```
-
-**用户决策选项**:
-
-| 决策 | 操作 | 适用场景 |
-|------|------|----------|
-| ✅ **Merge** | 手动合并到main | 测试通过，准备上线 |
-| ⏸️ **Hold** | 暂不合并，继续观察 | 需要更多测试 |
-| ❌ **Discard** | 删除分支，不合并 | 方案不好，放弃 |
-| 🔄 **Rework** | 在原branch上继续修改 | 需要调整 |
-
-### **Step 6: 手动 Merge（用户控制）**
-
-#### **方式A: 使用 Git 命令行**
-
-```powershell
-# 回到主目录
-cd Z:\代码\养龙虾\公众号专家
-
-# 切换到main
-git checkout main
-
-# Pull最新
-git pull origin main
-
-# 合并指定分支（按顺序）
-git merge fix/login-error --no-edit
-git merge feat/wechat-integration --no-edit
-
-# 推送更新后的main
-git push origin main
-```
-
-#### **方式B: 使用 GitHub/GitLab UI** (推荐)
-
-1. 打开仓库页面
-2. 点击 "Pull requests" → "New pull request"
-3. 选择 branch: `fix/login-error` → `main`
-4. 添加标题、描述
-5. 点击 "Create PR"
-
-**优点**:
-- 👀️ 可视化查看变更
-- 💬 可在线 Code Review
-- 🔒 保护 main 分支（需PR才能合并）
-- 📊 自动运行 CI/CD 测试
+腾讯 ima 知识库沉淀 + 学习问答助手（只回答方法论问题）
 
 ---
 
-## 🗑️ Session 生命周期
+## ⚠️ 风控边界（绝对不能违反）
 
-```
-创建 Session → 开发 → Commit → Push → [Review] → [Merge/Discard] → Cleanup
-    ↓           ↓        ↓       ↓         ↓            ↓           ↓
-  wt-fix-xxx  编辑文件  git commit  git push   用户检查    用户操作    删除worktree
-              测试验证             远程branch  PR/Merge    更新main
-```
+### ❌ 禁止做的事
+- 推荐具体股票买入/卖出
+- 给出目标价/收益预期
+- 加群/收徒/带单
+- 一对一投资建议
+- 承诺收益/稳赚/必涨
+- 使用"牛股""妖股""内幕"等词
+- 自动发布公众号文章（必须人工审核）
+- 未授权搬运 B 站付费内容
 
-### **Cleanup: 清理已合并的 Session**
+### ✅ 允许做的事
+- 公开信息整理
+- 量化筛选样本展示（仅名称）
+- 市场结构与数据特征分析
+- 风险提示与方法论分享
+- AI 生成草稿 + 人工审核后发布
+- 激励广告解锁补充内容
 
-```powershell
-# 方法1: 删除 worktree（推荐在merge后做）
-git worktree remove ../wt-fix-login
+### 替代表达对照表
 
-# 方法2: 删除远程分支（merge后可选）
-git push origin --delete fix/login-error
-
-# 方法3: 删除本地分支
-git branch -d fix/login-error
-```
+| 高风险 | 安全替代表达 |
+|--------|-------------|
+| 股票池 | 量化样本观察 |
+| 选股 | 数据筛选样本 |
+| 牛股 | 学习样本 |
+| 推荐买入 | 入选规则说明 |
+| 目标价 | 估值区间讨论 |
+| 明日机会 | 今日数据特征 |
 
 ---
 
-## 📍 文件位置参考
+## 🔧 技术架构
 
-### **Local (本地)**
-| 文件 | 本地路径 | 用途 |
+### Docker 容器编排
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Nginx      │────▶│    App       │────▶│  PostgreSQL │
+│   :80/:443   │     │   :3000      │     │   :5432     │
+│  (反向代理)   │     │ (Node.js)    │     │  (数据库)    │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+| 容器名 | 镜像 | 端口 | 说明 |
+|--------|------|------|------|
+| gzh-expert-app | node:20-alpine | 3000 | 后端 API 服务 |
+| gzh-expert-db | postgres:16-alpine | 5432 | 数据库 |
+| gzh-expert-nginx | nginx:alpine | 80, 443 | 反向代理 |
+
+### 关键文件位置
+
+| 文件 | 本地路径 | 说明 |
 |------|----------|------|
-| .trae/project-skills/ | `.trae/project-skills/` | 项目专属 AI Skills |
-| submodule-setup.ps1 | `./` | Superpowers 部署脚本 |
+| 产品方案 | `docs/product-plan.md` | 产品定位、三层架构、风控边界 |
+| 部署方案 | `docs/deployment.md` | 服务器信息、Docker 命令、故障排查 |
+| Docker 编排 | `docker-compose.yml` | 三容器定义 |
+| 环境变量模板 | `.env.example` | 所有可配置项（不含真实值） |
+| Nginx 配置 | `nginx/nginx.conf` | 反向代理配置 |
+| 入口文件 | `src/index.ts` | Express API 入口 |
 
 ---
 
-## ⚠️ 最佳实践
+## 📡 微信接入状态
 
-### **✅ DO (推荐做法)**
+### 公众号
+- 类型：订阅号（未认证）
+- AppID：存放在 `.env` 的 `WECHAT_MP_APP_ID`
+- AppSecret：存放在 `.env` 的 `WECHAT_MP_APP_SECRET`（**绝不入库**）
+- 白名单 IP：需添加 `8.134.248.11`
+- 草稿 API：当前 `WECHAT_MP_DRAFT_MODE=manual`（手动复制），认证后切换为 `api`
 
-1. **每个独立任务创建新Session**
-   - 即使是小修复也用独立worktree
-   
-2. **Push前必须本地测试**
-   - 确保测试通过再push
-   
-3. **写清晰的commit message**
-   ```
-   type(scope): subject
-   body (optional)
-   
-   示例:
-   fix(login): 修复登录页面密码验证不生效问题
-   
-   - 添加表单验证逻辑
-   - 改进错误提示
-   ```
+### 小程序
+- 已注册（审核中）
+- 类目：待确认（**非游戏类目**）
+- 流量主：需上线后有流量才能开通
+- 广告位：开通流量主后创建激励视频广告位，填入 `MINIPROGRAM_AD_UNIT_ID`
+- 当前模式：`AD_MODE=mock`（模拟），拿到 adUnitId 后切换为 `wechat`
 
-4. **定期清理已完成的Session**
-   - merge后删除worktree
-   - 定期清理远程分支
-
-### **❌ DON'T (避免做法)**
-
-1. **不要在main上直接开发**
-   - 始终在worktree/branch中工作
-   
-2. **不要自动merge到main**
-   - 让用户控制何时合并
-   
-3. **不要忘记push到远程**
-   - local-only的branch无法fallback
+### 绑定关系
+- 公众号可绑定小程序（用于引流）
+- 但公众号流量主 ≠ 小程序流量主，**不互通**
 
 ---
 
-## 🔐 凭据配置（永久记住，无需每次提醒）
+## 🖥️ 服务器操作指南
 
-### **SSH 密钥**
+### 远程命令格式（从本地 PowerShell）
+
+```powershell
+ssh -i C:\Users\Administrator\.ssh\gzh_expert_ed25519 -o StrictHostKeyChecking=no gongzhonghao@8.134.248.11 "命令"
+```
+
+### 常用操作
+
 ```bash
-# SSH 私钥路径 (本地)
-C:/Users/Administrator/.ssh/id_ed25519
+# 进入项目目录
+cd ~/apps/gzh-expert
+
+# Docker 操作
+docker compose up -d --build        # 构建并启动
+docker compose ps                    # 查看状态
+docker compose logs -f app           # 查看日志
+docker compose restart app           # 重启应用
+docker compose down                  # 停止所有容器
+
+# 数据库备份
+docker compose exec postgres pg_dump -U gzh_expert gzh_expert > backup.sql
+
+# 更新部署
+git pull && docker compose up -d --build
+```
+
+### 已完成的服务器配置
+- [x] 项目用户 `gongzhonghao` + sudo 免密
+- [x] SSH Key 登录（ed25519）
+- [x] Docker 用户组权限
+- [x] Docker Compose v2.27.0
+- [x] 项目目录 `~/apps/gzh-expert/`
+- [x] `.env` 开发环境已创建
+
+### 待完成的安全配置
+- [ ] 防火墙规则（仅开放 80/443/22）
+- [ ] 禁用密码登录（确认 SSH Key 可用后）
+- [ ] SSL 证书配置
+- [ ] Nginx 安全头
+- [ ] 数据库定期自动备份
+
+---
+
+## 🔄 内容生成流程
+
+```
+公开财经信息源
+    ↓
+AI 整理生成 10 条财经要点（方案 A：联网检索）
+    ↓
+用户输入学习笔记 / 视频参考
+    ↓
+AI 生成公众号文章草稿（含风控检查）
+    ↓
+人工审核修改（必须！）
+    ↓
+创建公众号草稿（API 或手动复制）
+    ↓
+文末引导小程序（克制文案）
+    ↓
+用户观看激励广告（模拟/正式）
+    ↓
+解锁今日量化样本观察
+    ↓
+内容沉淀到知识库（后续）
 ```
 
 ---
 
-*最后更新: 2026-05-16*
-*版本: v1.0 - 公众号专家项目初始版本*
+## 📋 Session 工作流（Git Worktree）
+
+### Session 类型
+
+| 类型 | 前缀 | 示例 | 用途 |
+|------|------|------|------|
+| Bug修复 | `wt-fix-` | `wt-fix-ad-mock` | 修复问题 |
+| 新功能 | `wt-feat-` | `wt-feat-daily-article` | 开发新功能 |
+| 优化 | `wt-opt-` | `wt-opt-ai-prompt` | 性能优化 |
+| 基础设施 | `wt-infra-` | `wt-infra-docker-setup` | 环境/部署 |
+
+### 创建 Session
+
+```powershell
+cd Z:\代码\养龙虾\公众号专家
+git worktree add ../wt-feat-daily-article -b feat/daily-article
+cd ../wt-feat-daily-article
+# 开发...
+git add . && git commit -m "feat(article): 每日文章生成模块"
+git push origin feat/daily-article
+# 用户审查后手动 merge
+```
+
+---
+
+## 🔐 凭据安全规则（永久记住）
+
+1. **绝不**在聊天中接收 AppSecret、密码、API Key
+2. **绝不**将密钥写入代码或提交到 Git
+3. 密钥只存放于服务器 `.env` 文件
+4. `.env` 已加入 `.gitignore`
+5. 用户泄露密钥时立即提醒重置
+
+---
+
+## 📚 关键文档索引
+
+| 文档 | 路径 | 用途 |
+|------|------|------|
+| 产品方案 | `docs/product-plan.md` | 产品定位、三层架构、风控边界 |
+| 部署方案 | `docs/deployment.md` | 服务器信息、Docker 命令、故障排查 |
+| 环境变量模板 | `.env.example` | 所有可配置项说明 |
+| Docker 编排 | `docker-compose.yml` | 容器定义和依赖关系 |
+
+**新会话开始时优先读这 4 个文件，避免重复询问用户已确定的内容。**

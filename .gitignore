@@ -1,2 +1,39 @@
 # Superpowers-ZH (managed by Sync)
 .trae/.skills-version
+
+# Dependencies
+node_modules/
+
+# Environment - NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+.next/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Docker volumes (local only)
+data/
+
+# PM2
+pm2-ecosystem.config.js.dump

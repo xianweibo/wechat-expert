@@ -1,0 +1,65 @@
+services:
+  # --- Node.js 后端服务 ---
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gzh-expert-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./data/uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gzh-network
+
+  # --- PostgreSQL 数据库 ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: gzh-expert-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gzh_expert}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME}
+      POSTGRES_DB: ${POSTGRES_DB:-gzh_expert}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gzh_expert}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gzh-network
+
+  # --- Nginx 反向代理 ---
+  nginx:
+    image: nginx:alpine
+    container_name: gzh-expert-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - gzh-network
+
+volumes:
+  postgres_data:
+
+networks:
+  gzh-network:
+    driver: bridge
