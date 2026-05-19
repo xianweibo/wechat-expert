@@ -1,6 +1,6 @@
 # 公众号专家 - 部署方案
 
-> 最后更新：2026-05-16
+> 最后更新：2026-05-19
 
 ---
 
@@ -10,56 +10,57 @@
 |------|---|
 | IP | 8.134.248.11 |
 | 系统 | CentOS 8 |
-| 项目用户 | gongzhonghao |
-| 项目目录 | /home/gongzhonghao/apps/gzh-expert |
-| SSH Key | ed25519 (gzh_expert_ed25519) |
+| 项目用户 | `gongzhonghao` |
+| 项目目录 | `/home/gongzhonghao/apps/gzh-expert-git/` |
+| SSH Key | ed25519 (`gzh_expert_ed25519`) |
+| API 地址 | http://gzh.relexplace.com |
 
 ---
 
 ## 二、目录结构
 
 ```
-/home/gongzhonghao/apps/gzh-expert/
-├── docker-compose.yml      # 容器编排
-├── Dockerfile              # 应用镜像
+/home/gongzhonghao/apps/gzh-expert-git/
+├── docker-compose.yml      # 容器编排（App + PostgreSQL）
+├── Dockerfile              # 应用镜像（tsx 运行 TS）
 ├── .env                    # 环境变量（不提交 Git）
 ├── .env.example            # 环境变量模板（提交 Git）
 ├── .gitignore
-├── nginx/
-│   ├── nginx.conf          # Nginx 配置
-│   └── ssl/                # SSL 证书（后续）
 ├── src/                    # 源代码
 ├── data/
 │   └── uploads/            # 上传文件
 ├── logs/                   # 日志
 ├── docs/                   # 文档
-│   ├── product-plan.md     # 产品方案
-│   └── deployment.md       # 本文件
-└── scripts/                # 脚本
+└── scripts/                # 脚本（公众号 API 测试等）
 ```
 
 ---
 
-## 三、Docker 容器架构
+## 三、Docker 容器架构（已验证）
+
+**重要**：服务器 80/443 端口被**宝塔面板**占用，公众号专家 Docker 容器不使用 80/443，监听 **8080**，通过宝塔 Nginx 反向代理。
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Nginx      │────▶│    App       │────▶│  PostgreSQL │
-│   :80/:443   │     │   :3000      │     │   :5432     │
-│  (反向代理)   │     │ (Node.js)    │     │  (数据库)    │
-└─────────────┘     └─────────────┘     └─────────────┘
-        │                   │                   │
-        ▼                   ▼                   ▼
-   外部访问           API + 定时任务         数据持久化
+┌──────────────────────────────────────────────────────┐
+│          宝塔 Nginx (80) - 共用端口                │
+│   gzh.relexplace.com → 反向代理 127.0.0.1:8080     │
+└──────────────────────────────────────────────────────┘
+                        ↓ (8080)
+┌─────────────┐     ┌─────────────┐
+│  App       │────▶│  PostgreSQL │
+│  :3000     │     │   :5432     │
+│ (Node.js)   │     │ (Docker内)   │
+└─────────────┘     └─────────────┘
 ```
 
 ### 容器说明
 
 | 容器名 | 镜像 | 端口 | 说明 |
 |--------|------|------|------|
-| gzh-expert-app | node:20-alpine | 3000 | 后端 API 服务 |
-| gzh-expert-db | postgres:16-alpine | 5432 | 数据库 |
-| gzh-expert-nginx | nginx:alpine | 80, 443 | 反向代理 |
+| gzh-expert-app | node:20-alpine | 8080:3000 | 后端 API 服务（tsx 运行 TS） |
+| gzh-expert-db | postgres:16-alpine | 5432 (Docker内) | 数据库 |
+
+**已删除**：gzh-expert-nginx 容器（由宝塔 Nginx 替代）
 
 ---
 
@@ -69,32 +70,39 @@
 
 ```bash
 # 1. 进入项目目录
-cd ~/apps/gzh-expert
+cd ~/apps/gzh-expert-git
 
-# 2. 复制环境变量模板并填写
+# 2. 克隆代码（如果是新服务器）
+git clone https://github.com/xianweibo/wechat-expert.git .
+# 或已有目录则 git pull
+
+# 3. 复制环境变量模板并填写
 cp .env.example .env
 nano .env  # 填入真实值
 
-# 3. 构建并启动所有容器
+# 4. 构建并启动所有容器
 docker compose up -d --build
 
-# 4. 查看容器状态
+# 5. 查看容器状态
 docker compose ps
 
-# 5. 查看日志
+# 6. 查看日志
 docker compose logs -f app
 ```
 
 ### 日常操作
 
 ```bash
+# 进入项目目录
+cd ~/apps/gzh-expert-git
+
 # 启动
 docker compose up -d
 
 # 停止
 docker compose down
 
-# 重启某个服务
+# 重启应用
 docker compose restart app
 
 # 查看日志
@@ -113,46 +121,80 @@ docker compose up -d --build
 
 ---
 
-## 五、安全配置清单
+## 五、宝塔反向代理配置
+
+宝塔 Nginx 已配置 `gzh.relexplace.com` 反向代理到 `127.0.0.1:8080`。
+
+配置文件位置：
+
+```
+/www/server/panel/vhost/nginx/gzh.relexplace.com.conf
+```
+
+查看配置：
+
+```bash
+sudo nginx -T | grep gzh.relexplace
+```
+
+如需修改或新增域名，在宝塔面板操作或手动编辑配置文件后执行：
+
+```bash
+sudo nginx -t && sudo nginx -s reload
+```
+
+---
+
+## 六、安全配置清单
 
 ### 已完成
 - [x] 创建专用项目用户（非 root）
 - [x] SSH Key 登录（ed25519）
 - [x] 免密 sudo 配置
 - [x] Docker 用户组权限
-- [x] .env 文件加入 .gitignore
+- [x] `.env` 文件加入 `.gitignore`
+- [x] API 服务运行在 8080 端口
+- [x] 宝塔反向代理配置 `gzh.relexplace.com`
 
 ### 待完成
-- [ ] 配置防火墙规则（仅开放 80/443/22）
+- [ ] 防火墙规则（仅开放 80/443/22）
 - [ ] 禁用密码登录（确认 SSH Key 可用后）
-- [ ] SSL 证书配置（Let's Encrypt 或自有证书）
-- [ ] Nginx 安全头配置
+- [ ] SSL 证书配置（宝塔一键申请 Let's Encrypt）
 - [ ] 数据库定期自动备份
-- [ ] Docker 日志轮转配置
+- [ ] 公众号 AppSecret 存入项目 `.env`（当前在 `/tmp/.mp_app_secret`）
 
 ---
 
-## 六、微信公众号接入
+## 七、微信公众号接入（已验证）
 
 ### 当前状态
-- 类型：订阅号（未认证）
-- AppID：已获取（存放在 .env）
-- AppSecret：已重置（存放于服务器 .env，不入库）
-- 白名单 IP：需添加 8.134.248.11
-- 草稿 API：当前使用 manual 模式（手动复制）
+- 类型：订阅号
+- AppID：`wx567a639466e247cd`
+- AppSecret：已重置，存放于服务器 `/tmp/.mp_app_secret`
+- 白名单 IP：`8.134.248.11`
+- 草稿 API：**✅ 已验证可用**
+  - 流程：获取 Token → 上传封面图获取 media_id → 调用 draft/add 创建草稿
+  - 当前模式：`WECHAT_MP_DRAFT_MODE=manual`（手动复制）
+  - 可切换为 `api` 模式实现自动创建草稿
 
-### 接入条件满足后切换为 api 模式
-```env
-WECHAT_MP_DRAFT_MODE=api
+### 公众号 API 测试脚本
+
+```bash
+# 1. 存储 AppSecret
+echo '你的AppSecret' > /tmp/.mp_app_secret
+chmod 600 /tmp/.mp_app_secret
+
+# 2. 测试脚本
+/tmp/test-mp.sh
 ```
 
 ---
 
-## 七、微信小程序接入
+## 八、微信小程序接入
 
 ### 当前状态
 - 已注册（审核中）
-- 类目：待确认（建议非游戏类目）
+- 类目：待确认（**非游戏类目**）
 - 流量主：需上线后有流量才能开通
 - 广告位：开通流量主后创建激励视频广告位
 
@@ -169,25 +211,33 @@ MINIPROGRAM_AD_UNIT_ID=你的广告位ID
 
 ---
 
-## 八、故障排查
+## 九、故障排查
 
 ```bash
 # 容器没启动？
 docker compose ps
 
+# API 报 500？
+docker compose logs -f app
+
 # 端口被占用？
-sudo lsof -i :3000
-sudo lsof -i :80
+sudo lsof -i :8080
 sudo lsof -i :5432
 
 # 数据库连不上？
 docker compose exec postgres psql -U gzh_expert -d gzh_expert
 
-# Nginx 报错？
-docker compose logs nginx
+# 反向代理不工作？
+sudo nginx -t
+sudo nginx -s reload
+sudo nginx -T | grep gzh.relexplace
 
 # 磁盘空间？
 df -h
 docker system df
 docker system prune -f  # 清理无用镜像（谨慎）
+
+# API 直连测试
+curl http://127.0.0.1:8080/api/health
+curl http://gzh.relexplace.com/api/health
 ```

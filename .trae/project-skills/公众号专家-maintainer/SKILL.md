@@ -3,9 +3,9 @@ name: "公众号专家-maintainer"
 description: "Maintains 公众号专家 project using Session-based Worktree + Branch model. Invoke for bug fixes, feature development, or system maintenance. Each session creates isolated worktree+branch, pushes to remote, user controls merge."
 ---
 
-# 公众号专家 Maintainer Skill (v2.0)
+# 公众号专家 Maintainer Skill (v3.0)
 
-> 最后更新：2026-05-16
+> 最后更新：2026-05-19
 > **每次开始工作前必须先读此文件**
 
 ---
@@ -16,12 +16,15 @@ description: "Maintains 公众号专家 project using Session-based Worktree + B
 |------|---|
 | 名称 | 公众号专家（GongZhongHao Expert） |
 | 定位 | 每日财经观察与量化样本学习工具 |
-| 技术栈 | Docker + Node.js 20 + TypeScript + PostgreSQL 16 + Nginx |
+| 技术栈 | Docker + Node.js 20 + TypeScript + PostgreSQL 16 |
 | 部署服务器 | CentOS 8 @ `8.134.248.11` |
 | 项目用户 | `gongzhonghao` |
 | SSH Key | ed25519 (`gzh_expert_ed25519`) |
 | 项目目录(本地) | `Z:\代码\养龙虾\公众号专家` |
-| 项目目录(服务器) | `/home/gongzhonghao/apps/gzh-expert` |
+| 项目目录(服务器) | `/home/gongzhonghao/apps/gzh-expert-git/` |
+| GitHub | https://github.com/xianweibo/wechat-expert |
+| API 地址 | http://gzh.relexplace.com |
+| 数据库 | PostgreSQL 16 (Docker) |
 
 ---
 
@@ -102,52 +105,58 @@ description: "Maintains 公众号专家 project using Session-based Worktree + B
 
 ---
 
-## 🔧 技术架构
+## 🔧 技术架构（已验证）
 
 ### Docker 容器编排
 
 ```
+┌──────────────────────────────────────────────────────┐
+│          宝塔 Nginx (80) - 共用端口                │
+│   gzh.relexplace.com → 反向代理 127.0.0.1:8080     │
+└──────────────────────────────────────────────────────┘
+                        ↓ (8080)
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Nginx      │────▶│    App       │────▶│  PostgreSQL │
-│   :80/:443   │     │   :3000      │     │   :5432     │
-│  (反向代理)   │     │ (Node.js)    │     │  (数据库)    │
+│  App        │────▶│  PostgreSQL │     │  (其他服务) │
+│  :3000      │     │   :5432     │     │            │
+│ (Node.js)   │     │ (Docker内)  │     │ 宝塔 Nginx │
 └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
+**重要**：服务器 80/443 端口被**宝塔面板**占用，公众号专家 Docker 容器**不使用** 80/443，而是监听 **8080**，通过宝塔 Nginx 反向代理到 `gzh.relexplace.com`。
+
 | 容器名 | 镜像 | 端口 | 说明 |
 |--------|------|------|------|
-| gzh-expert-app | node:20-alpine | 3000 | 后端 API 服务 |
-| gzh-expert-db | postgres:16-alpine | 5432 | 数据库 |
-| gzh-expert-nginx | nginx:alpine | 80, 443 | 反向代理 |
+| gzh-expert-app | node:20-alpine | 8080:3000 | 后端 API 服务（tsx 运行 TS） |
+| gzh-expert-db | postgres:16-alpine | 5432 (Docker内) | 数据库 |
 
-### 关键文件位置
+### API 端点（已验证）
 
-| 文件 | 本地路径 | 说明 |
-|------|----------|------|
-| 产品方案 | `docs/product-plan.md` | 产品定位、三层架构、风控边界 |
-| 部署方案 | `docs/deployment.md` | 服务器信息、Docker 命令、故障排查 |
-| Docker 编排 | `docker-compose.yml` | 三容器定义 |
-| 环境变量模板 | `.env.example` | 所有可配置项（不含真实值） |
-| Nginx 配置 | `nginx/nginx.conf` | 反向代理配置 |
-| 入口文件 | `src/index.ts` | Express API 入口 |
+| 端点 | 状态 | 说明 |
+|------|------|------|
+| GET /api/health | ✅ 正常 | 健康检查 |
+| GET /api/info | ✅ 正常 | 服务信息 |
+| POST /api/draft | ✅ 已通 | 公众号草稿 API（需先上传封面图） |
 
 ---
 
-## 📡 微信接入状态
+## 📡 微信接入状态（已验证）
 
 ### 公众号
-- 类型：订阅号（未认证）
-- AppID：存放在 `.env` 的 `WECHAT_MP_APP_ID`
-- AppSecret：存放在 `.env` 的 `WECHAT_MP_APP_SECRET`（**绝不入库**）
-- 白名单 IP：需添加 `8.134.248.11`
-- 草稿 API：当前 `WECHAT_MP_DRAFT_MODE=manual`（手动复制），认证后切换为 `api`
+- 类型：订阅号
+- AppID：`wx567a639466e247cd`（存放于服务器 `.env`）
+- AppSecret：已重置（存放于服务器 `/tmp/.mp_app_secret`）
+- 白名单 IP：`8.134.248.11`（需确认已加白）
+- 草稿 API：✅ **已验证可用**
+  - 流程：获取 Token → 上传封面图获取 media_id → 调用 draft/add 创建草稿
+  - 当前模式：`WECHAT_MP_DRAFT_MODE=manual`（手动复制）
+  - 可切换为 `api` 模式实现自动创建草稿
 
 ### 小程序
 - 已注册（审核中）
 - 类目：待确认（**非游戏类目**）
 - 流量主：需上线后有流量才能开通
-- 广告位：开通流量主后创建激励视频广告位，填入 `MINIPROGRAM_AD_UNIT_ID`
-- 当前模式：`AD_MODE=mock`（模拟），拿到 adUnitId 后切换为 `wechat`
+- 广告位：开通流量主后创建激励视频广告位
+- 当前模式：`AD_MODE=mock`（模拟）
 
 ### 绑定关系
 - 公众号可绑定小程序（用于引流）
@@ -167,20 +176,29 @@ ssh -i C:\Users\Administrator\.ssh\gzh_expert_ed25519 -o StrictHostKeyChecking=n
 
 ```bash
 # 进入项目目录
-cd ~/apps/gzh-expert
+cd ~/apps/gzh-expert-git
 
 # Docker 操作
 docker compose up -d --build        # 构建并启动
-docker compose ps                    # 查看状态
-docker compose logs -f app           # 查看日志
+docker compose ps                   # 查看状态
+docker compose logs -f app          # 查看日志
 docker compose restart app           # 重启应用
-docker compose down                  # 停止所有容器
+docker compose down                 # 停止所有容器
 
-# 数据库备份
+# 数据库操作
+docker compose exec postgres psql -U gzh_expert -d gzh_expert
 docker compose exec postgres pg_dump -U gzh_expert gzh_expert > backup.sql
 
 # 更新部署
 git pull && docker compose up -d --build
+
+# 公众号 API 测试
+curl -s -X POST "https://api.weixin.qq.com/cgi-bin/draft/add?access_token=TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @/tmp/draft-with-thumb.json
+
+# 查看宝塔反向代理配置
+sudo nginx -T | grep gzh.relexplace
 ```
 
 ### 已完成的服务器配置
@@ -188,15 +206,18 @@ git pull && docker compose up -d --build
 - [x] SSH Key 登录（ed25519）
 - [x] Docker 用户组权限
 - [x] Docker Compose v2.27.0
-- [x] 项目目录 `~/apps/gzh-expert/`
+- [x] 项目目录 `~/apps/gzh-expert-git/`
 - [x] `.env` 开发环境已创建
+- [x] API 服务运行在 8080 端口
+- [x] 宝塔反向代理配置 `gzh.relexplace.com`
+- [x] 公众号草稿 API 全链路验证通过
 
 ### 待完成的安全配置
 - [ ] 防火墙规则（仅开放 80/443/22）
 - [ ] 禁用密码登录（确认 SSH Key 可用后）
-- [ ] SSL 证书配置
-- [ ] Nginx 安全头
+- [ ] SSL 证书配置（宝塔一键申请）
 - [ ] 数据库定期自动备份
+- [ ] 公众号 AppSecret 存入项目 `.env`（当前在 `/tmp/.mp_app_secret`）
 
 ---
 
@@ -265,9 +286,11 @@ git push origin feat/daily-article
 
 | 文档 | 路径 | 用途 |
 |------|------|------|
+| README | `README.md` | 项目介绍和使用指南 |
 | 产品方案 | `docs/product-plan.md` | 产品定位、三层架构、风控边界 |
 | 部署方案 | `docs/deployment.md` | 服务器信息、Docker 命令、故障排查 |
 | 环境变量模板 | `.env.example` | 所有可配置项说明 |
 | Docker 编排 | `docker-compose.yml` | 容器定义和依赖关系 |
+| Skill | `.trae/project-skills/公众号专家-maintainer/SKILL.md` | 项目知识上下文 |
 
-**新会话开始时优先读这 4 个文件，避免重复询问用户已确定的内容。**
+**新会话开始时优先读 SKILL.md 和关键文档，避免重复询问用户已确定的内容。**
