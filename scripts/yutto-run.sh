@@ -1,0 +1,8 @@
+#!/bin/bash
+cd /tmp
+sudo docker run --rm -v /tmp:/data siguremo/yutto \
+  --auth "SESSDATA=6c8d910f,1794539178,c0f28*51CjCgiuLwxLl2W0_wCeUQE2phXSsrBmkgjT8W0NQKSCMJglKqfUQofOul7aleq7YzWnASVkw5WG8tYUpOMXZfbEQ1NHlCUmdkMHVQbnJlUS1yNzBvWU5RYVltMGEyelUtTURiSEFEeXRWdHJKWFFPbXdlOWEyWEJSeVhielkxcVpoYUdQTEtTMEpBIIEC;bili_jct=84b14a38d9df625098c9fe7fe338b421" \
+  --subtitle-only \
+  https://space.bilibili.com/290663424 \
+  -d /data \
+  -b
