@@ -1,0 +1,17 @@
+services:
+  gzh-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gzh-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    networks:
+      - gzh-worker-net
+
+networks:
+  gzh-worker-net:
+    driver: bridge

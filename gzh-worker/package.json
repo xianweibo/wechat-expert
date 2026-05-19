@@ -1,0 +1,23 @@
+{
+  "name": "gzh-worker",
+  "version": "0.1.0",
+  "description": "B站充电视频总结 Worker - 每日12点抓取+总结+推送到公众号草稿",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
