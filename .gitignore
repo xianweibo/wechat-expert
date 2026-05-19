@@ -8,6 +8,8 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.fix
+.env.production
 
 # Build output
 dist/
@@ -37,3 +39,9 @@ data/
 
 # PM2
 pm2-ecosystem.config.js.dump
+
+# Server secrets (do not commit)
+scripts/.mp_app_secret
+scripts/.env
+/tmp/.env
+/tmp/.mp_*
