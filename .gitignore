@@ -45,3 +45,14 @@ scripts/.mp_app_secret
 scripts/.env
 /tmp/.env
 /tmp/.mp_*
+
+# FRP配置包含敏感信息，不提交
+scripts/frps*.ini
+
+# 敏感密钥文件
+*.key
+*.pem
+auth.json
+
+# 临时文件
+*.tmp
