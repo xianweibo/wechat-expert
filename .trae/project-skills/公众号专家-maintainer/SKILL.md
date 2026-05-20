@@ -169,44 +169,92 @@ NAS (192.168.9.3)
 
 ## 🖥️ 服务器操作指南
 
+### ⚡ 沙箱 SSH 连接（AI 助手专用）
+
+> **重要**：沙箱无法直连外网，必须通过 HTTP 代理 `127.0.0.1:18080` 转发 SSH 连接。
+> 所有 NAS 操作必须 `sudo su -` 提权到 root。
+
+```bash
+# SSH config 已配置，直接使用别名即可
+ssh nas       # → paulproject@8.134.248.11:39022 (frp隧道→NAS)
+ssh aliyun    # → gongzhonghao@8.134.248.11:22  (直连阿里云)
+```
+
+**SSH config 内容**（`~/.ssh/config`）：
+```
+Host nas
+    HostName 8.134.248.11
+    Port 39022
+    User paulproject
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+    ProxyCommand nc -X connect -x 127.0.0.1:18080 %h %p
+
+Host aliyun
+    HostName 8.134.248.11
+    Port 22
+    User gongzhonghao
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+    ProxyCommand nc -X connect -x 127.0.0.1:18080 %h %p
+```
+
+**NAS 操作模板**（必须 sudo su -）：
+```bash
+# 查看容器状态
+ssh nas "sudo su - -c 'docker ps'"
+
+# 查看日志
+ssh nas "sudo su - -c 'docker logs frpc-gzhworker --tail 20'"
+
+# 编辑配置后重启
+ssh nas "sudo su - -c 'docker restart frpc-gzhworker'"
+
+# 检查磁盘
+ssh nas "sudo su - -c 'df -h'"
+```
+
+**阿里云操作模板**：
+```bash
+# 查看容器状态
+ssh aliyun "docker ps"
+
+# 查看日志
+ssh aliyun "docker compose -f /home/gongzhonghao/apps/gzh-expert-git/docker-compose.yml logs -f app"
+
+# 部署
+ssh aliyun "cd /home/gongzhonghao/apps/gzh-expert-git && git pull && docker compose up -d --build"
+```
+
+### frp 隧道架构
+
+```
+[沙箱] ──ProxyCommand(nc)──▶ [8.134.248.11:39022] ──frp隧道──▶ [NAS:22]
+[沙箱] ──ProxyCommand(nc)──▶ [8.134.248.11:22]    ──────────▶ [阿里云SSH]
+
+frps 容器: frps-gzhworker (阿里云, 监听 39801)
+frpc 容器: frpc-gzhworker (NAS, 连接阿里云 39801)
+配置文件:
+  - 阿里云: /tmp/frps.ini → 映射到容器 /etc/frp/frps.toml
+  - NAS:    /tmp/frpc-gzhworker.ini → 映射到容器 /etc/frp/frpc.toml
+
+当前 frp 转发规则:
+  - 39802 → NAS 39800 (阿里云API TCP)
+  - 39022 → NAS 22   (SSH, 沙箱专用)
+```
+
+### 本地操作（用户 Windows 电脑）
+
 ### 阿里云服务器（公众号专家）
 
 ```powershell
 ssh -i C:\Users\Administrator\.ssh\gzh_expert_ed25519 -o StrictHostKeyChecking=no gongzhonghao@8.134.248.11 "命令"
 ```
 
-```bash
-# Docker 操作
-docker compose up -d --build
-docker compose logs -f app
-docker compose restart app
-
-# 获取 AppSecret
-cat /tmp/.mp_app_secret
-```
-
 ### NAS 服务器（gzh-worker）
 
 ```powershell
 ssh -i $env:USERPROFILE\.ssh\gzh_nas_ed25519 -o StrictHostKeyChecking=no paulproject@192.168.9.3 "命令"
-```
-
-```bash
-# 下载字幕
-~/.local/bin/yutto --auth "SESSDATA=xxx;bili_jct=xxx" --subtitle-only https://www.bilibili.com/video/BVxxxx -d /tmp/yutto-out -b
-
-# 调用 MiniMax
-curl -X POST "https://api.minimaxi.com/anthropic/v1/messages" \
-  -H "x-api-key: sk-cp-w8aacTTO..." \
-  -H "anthropic-version: 2023-06-01" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"MiniMax-M2.7","max_tokens":800,"messages":[{"role":"user","content":"..."}]}'
-
-# 推送摘要到阿里云
-curl -X POST "http://8.134.248.11:3000/api/bilibili/summary" \
-  -H "X-Worker-Secret: gzh_worker_secret_2026" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"...","summary":"...","source":{...}}'
 ```
 
 ---
