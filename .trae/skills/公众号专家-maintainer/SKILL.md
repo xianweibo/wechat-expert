@@ -246,11 +246,102 @@ git branch -d fix/login-error
 
 ### **SSH 密钥**
 ```bash
-# SSH 私钥路径 (本地)
+# SSH 私钥路径 (本地 Windows)
 C:/Users/Administrator/.ssh/id_ed25519
+```
+
+### **沙箱 SSH 连接（AI 助手专用）**
+
+> **关键规则**：
+> 1. 沙箱无法直连外网，必须通过 HTTP 代理 `127.0.0.1:18080` 转发 SSH
+> 2. 所有 NAS 操作必须 `sudo su -` 提权到 root
+> 3. SSH config 已配置，直接用别名 `ssh nas` / `ssh aliyun`
+
+```bash
+ssh nas       # → paulproject@8.134.248.11:39022 (frp隧道→NAS)
+ssh aliyun    # → gongzhonghao@8.134.248.11:22  (直连阿里云)
+```
+
+**SSH config**（`~/.ssh/config`）：
+```
+Host nas
+    HostName 8.134.248.11
+    Port 39022
+    User paulproject
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+    ProxyCommand nc -X connect -x 127.0.0.1:18080 %h %p
+
+Host aliyun
+    HostName 8.134.248.11
+    Port 22
+    User gongzhonghao
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+    ProxyCommand nc -X connect -x 127.0.0.1:18080 %h %p
+```
+
+**NAS 操作模板**（必须 sudo su -）：
+```bash
+ssh nas "sudo su - -c 'docker ps'"
+ssh nas "sudo su - -c 'docker logs frpc-gzhworker --tail 20'"
+ssh nas "sudo su - -c 'df -h'"
+```
+
+**阿里云操作模板**：
+```bash
+ssh aliyun "docker ps"
+ssh aliyun "cd /home/gongzhonghao/apps/gzh-expert-git && git pull && docker compose up -d --build"
+```
+
+### **frp 隧道架构**
+
+```
+[沙箱] ──ProxyCommand(nc)──▶ [8.134.248.11:39022] ──frp隧道──▶ [NAS:22]
+[沙箱] ──ProxyCommand(nc)──▶ [8.134.248.11:22]    ──────────▶ [阿里云SSH]
+
+frps 容器: frps-gzhworker (阿里云, 监听 39801)
+frpc 容器: frpc-gzhworker (NAS, 连接阿里云 39801)
+配置文件:
+  - 阿里云: /tmp/frps.ini → 映射到容器 /etc/frp/frps.toml
+  - NAS:    /tmp/frpc-gzhworker.ini → 映射到容器 /etc/frp/frpc.toml
+
+当前 frp 转发规则:
+  - 39802 → NAS 39800 (阿里云API TCP)
+  - 39022 → NAS 22   (SSH, 沙箱专用)
+```
+
+**注意**：每次新会话沙箱环境是全新的，SSH 密钥和 config 需要重新配置。可在会话开始时执行以下初始化：
+
+```bash
+# 1. 生成密钥
+ssh-keygen -t ed25519 -C "solo-sandbox-gzh" -f ~/.ssh/id_ed25519 -N ""
+
+# 2. 写入 SSH config
+cat > ~/.ssh/config << 'EOF'
+Host nas
+    HostName 8.134.248.11
+    Port 39022
+    User paulproject
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+    ProxyCommand nc -X connect -x 127.0.0.1:18080 %h %p
+
+Host aliyun
+    HostName 8.134.248.11
+    Port 22
+    User gongzhonghao
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+    ProxyCommand nc -X connect -x 127.0.0.1:18080 %h %p
+EOF
+chmod 600 ~/.ssh/config
+
+# 3. 公钥已添加到 NAS 和阿里云的 authorized_keys，无需再次添加
+# 公钥指纹: solo-sandbox-gzh
 ```
 
 ---
 
-*最后更新: 2026-05-16*
-*版本: v1.0 - 公众号专家项目初始版本*
+*最后更新: 2026-05-20*
+*版本: v1.1 - 新增沙箱 SSH 连接配置*
