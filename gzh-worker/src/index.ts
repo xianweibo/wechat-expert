@@ -94,7 +94,7 @@ async function runDailyTask(): Promise<void> {
   };
 
   console.log('[5/5] 发送到阿里云服务器...');
-  await postSummary(payload, config.aliyunApiUrl);
+  await postSummary(payload, config.aliyunApiUrl, config.workerSecret);
 
   await saveLastBvid(config.lastBvidFile, targetVideo.bvid);
 

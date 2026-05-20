@@ -11,6 +11,7 @@ export function getConfig(): Config {
   const targetUpUid = parseInt(process.env.TARGET_UP_UID || '290663424');
   const minimaxApiKey = process.env.MINIMAX_API_KEY;
   const aliyunApiUrl = process.env.ALIYUN_API_URL || 'http://8.134.248.11:3000/api/bilibili/summary';
+  const workerSecret = process.env.BILIBILI_WORKER_SECRET || '';
   const lastBvidFile = process.env.LAST_BVID_FILE || '/app/data/last_bvid.txt';
 
   if (!sessdata || !bili_jct || !minimaxApiKey) {
@@ -22,6 +23,7 @@ export function getConfig(): Config {
     targetUpUid,
     minimaxApiKey,
     aliyunApiUrl,
+    workerSecret,
     lastBvidFile,
   };
 }

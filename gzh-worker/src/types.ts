@@ -65,5 +65,6 @@ export interface Config {
   targetUpUid: number;
   minimaxApiKey: string;
   aliyunApiUrl: string;
+  workerSecret: string;
   lastBvidFile: string;
 }
