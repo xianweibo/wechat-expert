@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
 app.use(helmet());
 app.use(cors());
@@ -66,13 +66,13 @@ async function getAccessToken(): Promise<string> {
 
   const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
   const resp = await fetch(url);
-  const data = await resp.json();
+  const data: any = await resp.json();
 
   if (data.errcode) {
     throw new Error(`获取 access_token 失败: ${data.errmsg}`);
   }
 
-  return data.access_token;
+  return data.access_token as string;
 }
 
 interface DraftParams {
@@ -109,13 +109,13 @@ async function createDraft(params: DraftParams, accessToken: string): Promise<st
     body: JSON.stringify(draftData),
   });
 
-  const data = await resp.json();
+  const data: any = await resp.json();
 
   if (data.errcode) {
     throw new Error(`创建草稿失败: ${data.errmsg}`);
   }
 
-  return data.media_id;
+  return data.media_id as string;
 }
 
 function generateArticleContent(params: DraftParams): string {

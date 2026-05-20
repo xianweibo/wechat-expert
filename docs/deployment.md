@@ -38,14 +38,14 @@
 
 ## 三、Docker 容器架构（已验证）
 
-**重要**：服务器 80/443 端口被**宝塔面板**占用，公众号专家 Docker 容器不使用 80/443，监听 **8080**，通过宝塔 Nginx 反向代理。
+**重要**：服务器 80/443 端口被**宝塔面板**占用，公众号专家 Docker 容器不使用 80/443，监听 **39800**，通过宝塔 Nginx 反向代理。
 
 ```
 ┌──────────────────────────────────────────────────────┐
 │          宝塔 Nginx (80) - 共用端口                │
-│   gzh.relexplace.com → 反向代理 127.0.0.1:8080     │
+│   gzh.relexplace.com → 反向代理 127.0.0.1:39800    │
 └──────────────────────────────────────────────────────┘
-                        ↓ (8080)
+                        ↓ (39800)
 ┌─────────────┐     ┌─────────────┐
 │  App       │────▶│  PostgreSQL │
 │  :3000     │     │   :5432     │
@@ -57,7 +57,7 @@
 
 | 容器名 | 镜像 | 端口 | 说明 |
 |--------|------|------|------|
-| gzh-expert-app | node:20-alpine | 8080:3000 | 后端 API 服务（tsx 运行 TS） |
+| gzh-expert-app | node:20-alpine | 39800:3000 | 后端 API 服务（tsx 运行 TS） |
 | gzh-expert-db | postgres:16-alpine | 5432 (Docker内) | 数据库 |
 
 **已删除**：gzh-expert-nginx 容器（由宝塔 Nginx 替代）
@@ -221,7 +221,7 @@ docker compose ps
 docker compose logs -f app
 
 # 端口被占用？
-sudo lsof -i :8080
+sudo lsof -i :39800
 sudo lsof -i :5432
 
 # 数据库连不上？
@@ -238,6 +238,6 @@ docker system df
 docker system prune -f  # 清理无用镜像（谨慎）
 
 # API 直连测试
-curl http://127.0.0.1:8080/api/health
+curl http://127.0.0.1:39800/api/health
 curl http://gzh.relexplace.com/api/health
 ```

@@ -128,5 +128,8 @@ function parseSubtitle(content: any): string {
 }
 
 export function isChargedVideo(video: BilibiliVideo): boolean {
-  return true;
+  if (video.rights?.is_charging_arc === 1) {
+    return true;
+  }
+  return false;
 }

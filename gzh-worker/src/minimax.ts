@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { withRetry } from './types';
 
 export interface SummaryResult {
   summary: string;
@@ -29,28 +30,29 @@ ${subtitleText || '（无字幕）'}
 
   console.log('[MiniMax] 发送总结请求...');
 
-  const response = await axios.post(
-    'https://api.minimax.chat/v1/text/chatcompletion_v2',
-    {
-      model: 'MiniMax-Text-01',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1000,
-      temperature: 0.7,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+  return withRetry(async () => {
+    const response = await axios.post(
+      'https://api.minimax.chat/v1/text/chatcompletion_v2',
+      {
+        model: 'MiniMax-Text-01',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1000,
+        temperature: 0.7,
       },
-      timeout: 60000,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 60000,
+      }
+    );
+
+    if (response.data.error) {
+      throw new Error(`MiniMax API 错误: ${response.data.error.message}`);
     }
-  );
 
-  if (response.data.error) {
-    throw new Error(`MiniMax API 错误: ${response.data.error.message}`);
-  }
-
-  const summary = response.data.choices?.[0]?.message?.content || '';
-
-  return { summary, keyPoints: [] };
+    const summary = response.data.choices?.[0]?.message?.content || '';
+    return { summary, keyPoints: [] };
+  }, 'MiniMax');
 }
