@@ -4,10 +4,12 @@ WORKDIR /app
 
 COPY package.json ./
 
-RUN npm install --omit=dev && npm cache clean --force
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm install && \
+    npm cache clean --force
 
 COPY . .
 
 RUN mkdir -p /app/data
 
-CMD ["node", "src/index.js"]
+CMD ["npx", "tsx", "src/index.ts"]

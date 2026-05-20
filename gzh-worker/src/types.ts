@@ -17,6 +17,11 @@ export interface BilibiliVideo {
     share: number;
     reply: number;
   };
+  rights?: {
+    is_cooperation?: number;
+    is_charging_arc?: number;
+    no_background?: number;
+  };
 }
 
 export interface VideoDetail {
@@ -67,4 +72,25 @@ export interface Config {
   aliyunApiUrl: string;
   workerSecret: string;
   lastBvidFile: string;
+}
+
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  label: string,
+  maxRetries: number = 2
+): Promise<T> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      lastError = e;
+      if (attempt <= maxRetries) {
+        const delay = attempt * 2000;
+        console.warn(`[${label}] 第 ${attempt} 次失败，${delay}ms 后重试: ${e.message}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError!;
 }
