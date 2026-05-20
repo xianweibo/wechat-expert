@@ -1,0 +1,9 @@
+[common]
+bindPort = 39802
+auth.token = "StockAgent_2025_Token"
+
+[gzh_expert_http]
+type = "http"
+local_ip = "127.0.0.1"
+local_port = 39800
+custom_domains = "gzh.worker.local"

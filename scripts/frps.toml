@@ -1,0 +1,5 @@
+[common]
+bindPort = 37000
+auth.token = "StockAgent_2025_Token"
+webServer.port = 37001
+webServer.password = "admin123"
