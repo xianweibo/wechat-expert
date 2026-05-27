@@ -2,10 +2,10 @@ import cron from 'node-cron';
 import fs from 'fs';
 import path from 'path';
 import { getConfig } from './config';
-import { getLatestVideos, getVideoDetail, getSubtitle } from './bilibili';
+import { getLatestVideos, getLatestVideosFromDynamic, getVideoDetail, getSubtitle } from './bilibili';
 import { generateSummary } from './minimax';
 import { postSummary } from './poster';
-import { SummaryPayload } from './types';
+import { SummaryPayload, VideoDetail } from './types';
 
 async function loadLastBvid(filePath: string): Promise<string | null> {
   try {
@@ -33,8 +33,20 @@ async function runDailyTask(): Promise<void> {
 
   const config = getConfig();
 
-  console.log(`[1/5] 获取 UP 主 ${config.targetUpUid} 的最新视频...`);
-  const videos = await getLatestVideos(config.targetUpUid, config.bilibili.sessdata, config.bilibili.bili_jct);
+  console.log(`[1/5] 获取 UP 主 ${config.targetUpUid} 的最新充电视频...`);
+
+  let videos = await getLatestVideosFromDynamic(
+    config.targetUpUid, config.bilibili.sessdata, config.bilibili.bili_jct
+  );
+
+  if (videos.length === 0) {
+    console.log('[BiliBili] 动态API未返回视频，尝试常规API...');
+    try {
+      videos = await getLatestVideos(config.targetUpUid, config.bilibili.sessdata, config.bilibili.bili_jct);
+    } catch (e: any) {
+      console.warn(`[BiliBili] 常规API也失败: ${e.message}`);
+    }
+  }
 
   if (videos.length === 0) {
     console.log('[BiliBili] 没有找到视频，退出');
@@ -42,28 +54,35 @@ async function runDailyTask(): Promise<void> {
   }
 
   console.log(`[BiliBili] 找到 ${videos.length} 个视频`);
-  console.log(`[BiliBili] 最新视频: ${videos[0].title} (${videos[0].bvid})`);
 
   const lastBvid = await loadLastBvid(config.lastBvidFile);
 
   let targetVideo = null;
+  let targetDetail: VideoDetail | null = null;
+
   for (const video of videos) {
     if (video.bvid === lastBvid) break;
-    targetVideo = video;
-    break;
+    const detail = await getVideoDetail(video.bvid, config.bilibili.sessdata, config.bilibili.bili_jct);
+    const rights = (detail as any).rights || {};
+    const isCharged = rights.is_charging_arc === 1 || rights.ugc_pay === 1;
+    if (isCharged) {
+      targetVideo = video;
+      targetDetail = detail;
+      console.log(`[BiliBili] 找到充电视频: ${video.title} (${video.bvid})`);
+      break;
+    }
+    console.log(`[BiliBili] 跳过非充电视频: ${video.title}`);
   }
 
-  if (!targetVideo) {
-    console.log('[BiliBili] 没有新视频需要处理，退出');
+  if (!targetVideo || !targetDetail) {
+    console.log('[BiliBili] 没有新的充电视频需要处理，退出');
     return;
   }
 
   console.log(`\n[2/5] 处理视频: ${targetVideo.title}`);
 
-  console.log('[3/5] 获取视频详情和字幕...');
-  const detail = await getVideoDetail(targetVideo.bvid, config.bilibili.sessdata, config.bilibili.bili_jct);
-
-  const firstCid = detail.pages?.[0]?.cid || 0;
+  console.log('[3/5] 获取字幕...');
+  const firstCid = targetDetail.pages?.[0]?.cid || 0;
   let subtitleText = '';
 
   if (firstCid > 0) {
@@ -73,7 +92,7 @@ async function runDailyTask(): Promise<void> {
   console.log(`[BiliBili] 字幕长度: ${subtitleText.length} 字符`);
 
   console.log('[4/5] 调用 MiniMax 生成总结...');
-  const result = await generateSummary(detail.title, detail.description + '\n' + detail.dynamic, subtitleText, config.minimaxApiKey, targetVideo.bvid);
+  const result = await generateSummary(targetDetail.title, targetDetail.description + '\n' + targetDetail.dynamic, subtitleText, config.minimaxApiKey, targetVideo.bvid);
 
   console.log('--- 总结预览 ---');
   console.log(result.summary.substring(0, 200) + '...');
@@ -82,13 +101,13 @@ async function runDailyTask(): Promise<void> {
   const publishedAt = new Date(targetVideo.pubdate * 1000).toISOString().replace('T', ' ').substring(0, 10);
 
   const payload: SummaryPayload = {
-    title: detail.title,
+    title: targetDetail.title,
     summary: result.summary,
     source: {
       bvid: targetVideo.bvid,
       url: `https://www.bilibili.com/video/${targetVideo.bvid}`,
       up_uid: targetVideo.owner.mid,
-      up_name: targetVideo.owner.name,
+      up_name: '',
       published_at: publishedAt,
     },
   };
