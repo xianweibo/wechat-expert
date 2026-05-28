@@ -13,31 +13,38 @@ print('=== Regression Test ===')
 
 print('\n[1] Dynamic API...')
 url = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid=%d' % UP_UID
-resp = requests.get(url, cookies=cookies, headers=req_headers, timeout=15)
-print('  HTTP: %d, CT: %s' % (resp.status_code, resp.headers.get('content-type')))
-if resp.text:
-    data = resp.json()
-    print('  code=%d, items=%d' % (data.get('code'), len(data.get('data',{}).get('items',[]))))
-else:
-    print('  EMPTY response!')
+try:
+    resp = requests.get(url, cookies=cookies, headers=req_headers, timeout=15)
+    print('  HTTP: %d, CT: %s' % (resp.status_code, resp.headers.get('content-type')))
+    if resp.status_code == 200 and resp.text:
+        data = resp.json()
+        print('  code=%d, items=%d' % (data.get('code'), len(data.get('data',{}).get('items',[]))))
+    else:
+        print('  Dynamic API returned %d or empty (likely 412), skip' % resp.status_code)
+except Exception as e:
+    print('  Dynamic API error: %s' % e)
 
 print('\n[2] Regular API...')
 url2 = 'https://api.bilibili.com/x/space/arc/search?mid=%d&ps=5&pn=1&order=pubdate' % UP_UID
-resp2 = requests.get(url2, cookies=cookies, headers=req_headers, timeout=15)
-print('  HTTP: %d' % resp2.status_code)
-if resp2.text:
-    data2 = resp2.json()
-    print('  code=%d, msg=%s' % (data2.get('code'), data2.get('message')))
-    vlist = data2.get('data',{}).get('list',{}).get('vlist',[])
-    print('  Videos: %d' % len(vlist))
-    for v in vlist[:5]:
-        bv = v.get('bvid','')
-        title = v.get('title','')[:30]
-        created = v.get('created',0)
-        date = datetime.datetime.fromtimestamp(created).strftime('%Y-%m-%d') if created else 'N/A'
-        print('    %s | %s | %s' % (bv, title, date))
-else:
-    print('  EMPTY!')
+vlist = []
+try:
+    resp2 = requests.get(url2, cookies=cookies, headers=req_headers, timeout=15)
+    print('  HTTP: %d' % resp2.status_code)
+    if resp2.status_code == 200 and resp2.text:
+        data2 = resp2.json()
+        print('  code=%d, msg=%s' % (data2.get('code'), data2.get('message')))
+        vlist = data2.get('data',{}).get('list',{}).get('vlist',[])
+        print('  Videos: %d' % len(vlist))
+        for v in vlist[:5]:
+            bv = v.get('bvid','')
+            title = v.get('title','')[:30]
+            created = v.get('created',0)
+            date = datetime.datetime.fromtimestamp(created).strftime('%Y-%m-%d') if created else 'N/A'
+            print('    %s | %s | %s' % (bv, title, date))
+    else:
+        print('  Regular API failed: %s' % resp2.text[:100])
+except Exception as e:
+    print('  Regular API error: %s' % e)
 
 print('\n[3] Find charged video...')
 target = None
