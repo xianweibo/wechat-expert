@@ -1,11 +1,11 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { generateCover } from './cover_gen';
+import { generateCover, type CoverStyle } from './cover_gen';
 
 dotenv.config();
 
@@ -15,6 +15,8 @@ const PORT = process.env.PORT || 3000;
 const COVER_IMAGE_URL = process.env.COVER_IMAGE_URL || 'https://aka.doubaocdn.com/s/Xw8r1wUL5J';
 const COVER_GEN_ENABLED = (process.env.COVER_GEN_ENABLED || 'false').toLowerCase() === 'true';
 const COVERS_DIR = process.env.COVERS_DIR || path.join(process.cwd(), 'covers');
+const DEFAULT_COVER_STYLE = (process.env.COVER_STYLE || 'auto').toLowerCase();
+const DEFAULT_COVER_ASPECT = process.env.COVER_ASPECT_RATIO || '16:9';
 
 app.use(helmet());
 app.use(cors());
@@ -27,9 +29,12 @@ app.get('/api/health', (_req, res) => {
 
 app.get('/api/info', (_req, res) => {
   res.json({
-    name: 'å…¬ä¼—å·ä¸“å®¶',
-    version: '0.1.0',
+    name: 'gongzhonghao-zhuanjia',
+    version: '0.2.0',
     mode: process.env.NODE_ENV,
+    cover_gen_enabled: COVER_GEN_ENABLED,
+    cover_style: DEFAULT_COVER_STYLE,
+    cover_aspect: DEFAULT_COVER_ASPECT,
   });
 });
 
@@ -43,26 +48,38 @@ app.post('/api/bilibili/summary', async (req, res) => {
   }
 
   try {
-    const { title, summary, source } = req.body;
+    const { title, summary, source, cover } = req.body as {
+      title: string;
+      summary: string;
+      source: any;
+      cover?: { style?: string; aspectRatio?: string; noText?: boolean };
+    };
 
-    console.log('æ”¶åˆ° Bç«™ Worker æ€»ç»“:');
-    console.log('æ ‡é¢˜:', title);
-    console.log('æ¥æº:', source);
+    console.log('[bilibili/summary] recv:');
+    console.log('  title:  ', title);
+    console.log('  source: ', source?.bvid);
 
     const accessToken = await getAccessToken();
     let thumbMediaId: string;
 
     if (COVER_GEN_ENABLED) {
-      console.log('[cover-gen] enabled, generating cover for:', title);
+      const style = (cover?.style || DEFAULT_COVER_STYLE) as CoverStyle;
+      const aspectRatio = cover?.aspectRatio || DEFAULT_COVER_ASPECT;
+      console.log(`[cover-gen] enabled, generating cover: style=${style} aspect=${aspectRatio}`);
       const result = await generateCover({
         title,
         description: (summary || '').slice(0, 400),
-        outPath: path.join(COVERS_DIR, `${Date.now()}_${path.basename(title).slice(0, 30)}.jpg`),
+        style,
+        aspectRatio,
+        noText: cover?.noText,
       });
       if (!result.ok) {
-        throw new Error(`cover generation failed: ${result.error}`);
+        throw new Error(`cover generation failed (${result.attempts} attempts): ${result.error}`);
       }
-      console.log('[cover-gen] saved to', result.filePath, `(${result.size} bytes, model=${result.model})`);
+      console.log(
+        `[cover-gen] saved to ${result.filePath} (${result.size} bytes, model=${result.model}, style=${result.style}, ` +
+        `${result.attempts} attempt(s), ${result.durationMs}ms)`
+      );
       thumbMediaId = await uploadLocalImage(result.filePath, accessToken);
     } else {
       console.log('[cover-gen] disabled, using fixed COVER_IMAGE_URL');
@@ -78,9 +95,19 @@ app.post('/api/bilibili/summary', async (req, res) => {
 
     res.json({ success: true, media_id: mediaId });
   } catch (e: any) {
-    console.error('åˆ›å»ºè‰ç¨¿å¤±è´¥:', e.message);
+    console.error('[bilibili/summary] failed:', e.message);
     res.status(500).json({ success: false, message: e.message });
   }
+});
+
+app.get('/api/cover/styles', (_req, res) => {
+  res.json({
+    styles: ['auto', 'tech', 'finance', 'lifestyle', 'education', 'news'],
+    default: DEFAULT_COVER_STYLE,
+    aspects: ['1:1', '16:9', '2.35:1', '4:3', '3:4'],
+    default_aspect: DEFAULT_COVER_ASPECT,
+    text_overlay: (process.env.COVER_TEXT_OVERLAY ?? 'true').toLowerCase() !== 'false',
+  });
 });
 
 async function getAccessToken(): Promise<string> {
@@ -96,17 +123,17 @@ async function getAccessToken(): Promise<string> {
   const data = await resp.json();
 
   if (data.errcode) {
-    throw new Error(`èŽ·å– access_token å¤±è´¥: ${data.errmsg}`);
+    throw new Error(`get access_token failed: ${data.errmsg}`);
   }
 
   return data.access_token;
 }
 
 async function uploadCoverImage(accessToken: string): Promise<string> {
-  console.log('ä¸Šä¼ å°é¢å›¾...');
+  console.log('uploading fixed cover image...');
   const imageResp = await fetch(COVER_IMAGE_URL);
   if (!imageResp.ok) {
-    throw new Error(`ä¸‹è½½å°é¢å›¾å¤±è´¥: ${imageResp.status}`);
+    throw new Error(`download cover image failed: ${imageResp.status}`);
   }
   const imageBuffer = Buffer.from(await imageResp.arrayBuffer());
 
@@ -123,7 +150,7 @@ async function uploadLocalImage(filePath: string, accessToken: string): Promise<
   const buf = fs.readFileSync(filePath);
   const ext = filePath.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
   const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
-  console.log('ä¸Šä¼ æœ¬åœ°å°é¢å›¾:', filePath);
+  console.log('uploading local cover:', filePath, `(${buf.length} bytes)`);
   return await uploadBufferToWechat(buf, contentType, ext, accessToken);
 }
 
@@ -150,9 +177,9 @@ async function uploadBufferToWechat(
 
   const uploadData = await uploadResp.json();
   if (uploadData.errcode) {
-    throw new Error(`ä¸Šä¼ å°é¢å›¾å¤±è´¥: ${uploadData.errmsg}`);
+    throw new Error(`upload cover to wechat failed: ${uploadData.errmsg}`);
   }
-  console.log('å°é¢å›¾ä¸Šä¼ æˆåŠŸ, media_id:', uploadData.media_id);
+  console.log('cover uploaded, media_id:', uploadData.media_id);
   return uploadData.media_id;
 }
 
@@ -194,7 +221,7 @@ async function createDraft(params: DraftParams, accessToken: string): Promise<st
   const data = await resp.json();
 
   if (data.errcode) {
-    throw new Error(`åˆ›å»ºè‰ç¨¿å¤±è´¥: ${data.errmsg}`);
+    throw new Error(`create draft failed: ${data.errmsg}`);
   }
 
   return data.media_id;
@@ -207,8 +234,6 @@ ${params.summary.replace(/\n/g, '<br/>')}
 <p style="color:#999;font-size:12px;">æœ¬å†…å®¹ç”± AI æ ¹æ®è§†é¢‘å­—å¹•è‡ªåŠ¨ç”Ÿæˆï¼Œä»…ä¾›å­¦ä¹ å‚è€ƒï¼Œä¸æž„æˆæŠ•èµ„å»ºè®®ã€‚</p>`;
 }
 
-app.use('/api/admin', mpProxy);
-
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`å…¬ä¼—å·ä¸“å®¶ API è¿è¡Œåœ¨ http://0.0.0.0:${PORT}`);
+  console.log(`gongzhonghao-zhuanjia API listening on http://0.0.0.0:${PORT}`);
 });
