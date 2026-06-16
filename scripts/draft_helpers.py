@@ -1,16 +1,16 @@
-"""????????????
+"""微信公众号草稿构建助手。
 
-- normalize_quotes:? LLM ???????? ASCII ??????????
-  ? HTML entity,???? JSON ?????? mp_proxy ?? HTTP 400
-  (SyntaxError: Expected ',' or '}' after property value in JSON at position 111)?
-- write_draft:? dict ???????? JSON,?????????,
-  ???? fail-fast ????? mp_proxy ????
+- normalize_quotes：把 LLM 输出里偶尔出现的 ASCII 直引号转成中文弯引号
+  或 HTML entity，避免污染 JSON 字符串值导致 mp_proxy 返回 HTTP 400
+  (SyntaxError: Expected ',' or '}' after property value in JSON at position 111)。
+- write_draft：把 dict 归一化、序列化为 JSON，并在写出前自检一次，
+  本地提前 fail-fast 而不是发到 mp_proxy 才报错。
 
-????(???):
-- ?? " ????(CJK ?? / ???? / ??? ASCII),??????? \u201C / \u201D
-  (????,????????)?
-- ??(????:HTML ??? style="..."),?? &quot; HTML entity,
-  ?? JSON/HTML ????
+替换策略（启发式）：
+- 如果 " 紧邻中文（CJK 范围 / 全角符号 / 任何非 ASCII），转成中文弯引号 \u201C / \u201D
+  （左右交替，符合中文排版习惯）。
+- 否则（典型场景：HTML 属性值 style="..."），转成 &quot; HTML entity，
+  保证 JSON/HTML 双安全。
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ def build_payload(draft: dict, ensure_ascii: bool = False) -> str:
     except json.JSONDecodeError as e:
         snippet = payload[max(0, e.pos - 40):e.pos + 40]
         sys.stderr.write(
-            f"[draft_helpers] JSON ???? @ pos {e.pos}: {e.msg}\n"
+            f"[draft_helpers] JSON 自检失败 @ pos {e.pos}: {e.msg}\n"
             f"  snippet: {snippet!r}\n"
         )
         raise
@@ -95,8 +95,8 @@ def write_draft(draft: dict, out_path, ensure_ascii: bool = False) -> int:
 
 if __name__ == "__main__":
     sample = {
-        "title": 'SpaceX "???" 135 ??',
-        "content": '<p>???"???"?????</p>',
+        "title": 'SpaceX "主动定" 135 美元',
+        "content": '<p>马斯克"自己拍"出来的价格</p>',
         "nested": {"k": 'a "b" c "d"'},
     }
     out_path = Path(__file__).resolve().parent / "draft_helpers_selftest.json"
