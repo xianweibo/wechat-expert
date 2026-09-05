@@ -791,6 +791,15 @@ async function writeBiliEnv(
     if (!sessdata || !biliJct) {
         return { ok: false, error: 'sessdata and bili_jct required' };
     }
+    // 严格白名单：cookie 值只允许安全字符。
+    // 否则含换行的值可向 .env 注入任意行（如覆盖 MINIMAX_API_KEY），
+    // 含 $ 的值会触发 String.replace 的替换模式注入
+    const SAFE_COOKIE_RE = /^[A-Za-z0-9%*,._\-]+$/;
+    if (!SAFE_COOKIE_RE.test(sessdata) || !SAFE_COOKIE_RE.test(biliJct) ||
+        (biliTicket !== '' && !SAFE_COOKIE_RE.test(biliTicket))) {
+        console.error('[qrcode-write-env] 非法 cookie 字符，拒绝写入');
+        return { ok: false, error: 'invalid characters in cookie values' };
+    }
     try {
         // 找到 .env 路径
         const envPaths = [
