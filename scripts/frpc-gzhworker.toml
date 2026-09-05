@@ -1,7 +1,7 @@
 [common]
 server_addr = "8.134.248.11"
 server_port = 39802
-token = "StockAgent_2025_Token"
+token = "${FRP_AUTH_TOKEN}"
 
 [gzh_expert_http]
 type = "http"

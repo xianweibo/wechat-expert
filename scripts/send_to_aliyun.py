@@ -1,12 +1,17 @@
 import requests
 import json
 import sys
+import os
 
 with open("/tmp/summary.txt", "r", encoding="utf-8") as f:
     summary = f.read()
 
-ALIYUN_API = "https://gzh.relexplace.com/api/bilibili/summary"
-WORKER_SECRET = "gzh_worker_secret_2026"
+ALIYUN_API = os.environ.get("ALIYUN_API_URL", "https://gzh.relexplace.com/api/bilibili/summary")
+WORKER_SECRET = os.environ.get("BILIBILI_WORKER_SECRET", "")
+
+if not WORKER_SECRET:
+    print("错误: 环境变量 BILIBILI_WORKER_SECRET 未设置")
+    sys.exit(1)
 
 payload = {
     "title": "【B站视频精华】全球格局重塑信号密集释放",
@@ -15,7 +20,7 @@ payload = {
         "bvid": "BV191Lu64EWD",
         "url": "https://www.bilibili.com/video/BV191Lu64EWD",
         "up_uid": 290663424,
-        "up_name": "有何高见9527",
+        "up_name": "",
         "published_at": "2026-05-19"
     }
 }

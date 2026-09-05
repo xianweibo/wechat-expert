@@ -1,0 +1,8 @@
+- [x] 腾讯云上 `/root/gzh-txh-api-v2/server.py` 进程已停止（pid=4064805 不存在）
+- [x] 腾讯云上无 systemd service 或 cron 自动启动旧 server.py（手动 nohup 启动，无自启动机制）
+- [x] 腾讯云 41090 端口被 frpc（STCP visitor）监听（pid=514243），不是 python 进程
+- [x] `gzh-txh-frpc-visitor` 容器在运行（`docker ps` 可见，`--restart=unless-stopped`）
+- [x] 腾讯云 curl `http://127.0.0.1:41090/health` 返回 NAS 响应（含 `modelscope_configured: true`）
+- [x] 测试 BVID 请求到达 NAS（NAS 容器日志有时间戳 16:57-16:58 的新记录）
+- [x] 阿里云 mp_proxy 日志显示源 IP 是 NAS（27.47.10.14, Python-urllib/3.11），不是腾讯云
+- [x] 阿里云上的临时 STCP visitor 容器已清理（frpc-nas-visitor 已删除，临时文件已清理）

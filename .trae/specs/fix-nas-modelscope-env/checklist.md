@@ -1,0 +1,8 @@
+- [x] NAS `.env` 含 `MoTa_API_KEY=ms-afb56c75-90a2-4585-b04f-0e77ee379fff`
+- [x] NAS `server.py` 含 `def modelscope_cover_image` 函数（最新版代码，grep 返回 2 次匹配）
+- [x] NAS 容器用 `docker compose up -d --force-recreate` 重启（不是 `docker restart`）
+- [x] `docker exec gzh-txh-api env` 输出含 `MoTa_API_KEY=ms-...` 和 `MOTASCOPE_MODEL=Tongyi-MAI/Z-Image-Turbo`
+- [x] NAS `/health` 端点返回 `{"ok": true, "modelscope_configured": true}`
+- [x] 测试 BVID 生成的日志含 `[cover] modelscope ok`（走魔搭，不是回退 MiniMax）
+- [x] 生成的封面 URL 为 `modelscope-studios.oss-cn-zhangjiakou.aliyuncs.com`（魔搭 OSS，财经媒体风格非 anime）
+- [x] 阿里云上的临时 STCP visitor 容器已清理（frpc-nas-visitor 已删除，临时文件已清理）

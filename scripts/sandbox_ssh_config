@@ -1,0 +1,16 @@
+# Sandbox SSH 访问配置文件
+# 阿里云服务器访问配置
+Host aliyun-gzh
+    HostName 8.134.248.11
+    User gongzhonghao
+    IdentityFile ~/.ssh/id_ed25519
+    Port 22
+    IdentitiesOnly yes
+
+# NAS访问配置（直连内网）
+Host nas-gzh
+    HostName 192.168.9.3
+    User paulproject
+    IdentityFile ~/.ssh/id_ed25519
+    Port 22
+    IdentitiesOnly yes

@@ -14,7 +14,8 @@ export async function postSummary(
         'Content-Type': 'application/json',
         'X-Worker-Secret': workerSecret,
       },
-      timeout: 30000,
+      // 阿里云端要现做封面（魔搭出图最长约 4 分钟）+ 建草稿，30s 必超时导致重试重复建草稿
+      timeout: 420000,
     });
 
     if (!response.data.success) {

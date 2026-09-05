@@ -147,27 +147,29 @@ def download_subtitle(bvid: str) -> str:
             print(f"字幕下载失败: {e.stderr}")
             raise
 
-    srt_files = []
-    for root, dirs, files in os.walk(tmpdir):
-        for file in files:
-            if file.endswith(".srt"):
-                srt_files.append(os.path.join(root, file))
+        # 必须在 with 块内查找文件：TemporaryDirectory 退出即删除，
+        # 之前 walk 在块外执行，目录已被清空，永远报"未找到下载的字幕文件"
+        srt_files = []
+        for root, dirs, files in os.walk(tmpdir):
+            for file in files:
+                if file.endswith(".srt"):
+                    srt_files.append(os.path.join(root, file))
 
-    if not srt_files:
-        raise Exception("未找到下载的字幕文件")
+        if not srt_files:
+            raise Exception("未找到下载的字幕文件")
 
-    content = ""
-    with open(srt_files[0], "r", encoding="utf-8") as f:
-        lines = f.readlines()
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if "-->" in line:
-                continue
-            if line.isdigit():
-                continue
-            content += line + "\n"
+        content = ""
+        with open(srt_files[0], "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if "-->" in line:
+                    continue
+                if line.isdigit():
+                    continue
+                content += line + "\n"
 
     print(f"字幕下载成功，共 {len(content)} 字符")
     return content
@@ -234,7 +236,8 @@ def push_to_cloud(title: str, summary: str, bvid: str, pubdate: str) -> bool:
             "Content-Type": "application/json",
             "X-Worker-Secret": os.environ.get("BILIBILI_WORKER_SECRET", "")
         }
-        response = requests.post(url, json=data, headers=headers, timeout=60)
+        # 阿里云端要现做封面（魔搭出图最长约 4 分钟）+ 建草稿，60s 必超时导致重试重复建草稿
+        response = requests.post(url, json=data, headers=headers, timeout=420)
         response.raise_for_status()
         result = response.json()
         if result.get("success"):

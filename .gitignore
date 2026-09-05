@@ -1,4 +1,4 @@
-﻿# Superpowers-ZH (managed by Sync)
+# Superpowers-ZH (managed by Sync)
 .trae/.skills-version
 
 # Dependencies
@@ -46,17 +46,36 @@ scripts/.env
 /tmp/.env
 /tmp/.mp_*
 
-# FRP���ð��������Ϣ�����ύ
+# FRP���ð���������Ϣ�����ύ
 scripts/frps*.ini
 
-# �����Կ�ļ�
+# ������Կ�ļ�
 *.key
 *.pem
 auth.json
 
-# ��ʱ�ļ�
+# SSH Key backups (NEVER commit)
+id_ed25519.backup*
+
+# temp
 *.tmp
 
+# ===== 根目录一次性诊断/临时文件（2026-09-05 清理）=====
+_*.ps1
+_*.json
+_*.toml
+_diag*
+aliyun_env.txt
+curl_*
+*_out.txt
+*_stderr.txt
+*_stdout.txt
+amend_*.ps1
+apply_*.ps1
+api_check_*.ps1
+check_*.ps1
+cleanup_*.ps1
+commit_*.ps1
 
-# Generated cover images (MiniMax)
-covers/
+# ===== 本地归档（历史临时文件，不入库）=====
+_archive/

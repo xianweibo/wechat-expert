@@ -1,7 +1,12 @@
 import requests
 import json
+import os
 
-API_KEY = "sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo"
+API_KEY = os.environ.get("MINIMAX_API_KEY", "")
+
+if not API_KEY:
+    print("错误: 环境变量 MINIMAX_API_KEY 未设置")
+    exit(1)
 
 url = "https://api.minimaxi.com/anthropic/v1/messages"
 
