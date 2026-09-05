@@ -11,7 +11,7 @@ import mpProxy from './mp_proxy';
 dotenv.config({ override: true });
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // ---- 环境变量 ----
 const MINIMAX_API_KEY = (process.env.MINIMAX_API_KEY || '').trim();
