@@ -813,12 +813,27 @@ async function writeBiliEnv(
         const bakPath = envPath + '.bak.' + new Date().toISOString().replace(/[-:T]/g, '').substring(0, 15);
         fs.copyFileSync(envPath, bakPath);
 
-        // 替换
+        // 替换（逐键统计：.env 里不存在的键追加到文件尾，避免静默无操作）
         let content = fs.readFileSync(envPath, 'utf8');
-        content = content.replace(/^BILIBILI_SESSDATA=.*$/m, `BILIBILI_SESSDATA=${sessdata}`);
-        content = content.replace(/^BILIBILI_BILI_JCT=.*$/m, `BILIBILI_BILI_JCT=${biliJct}`);
-        if (biliTicket) {
-            content = content.replace(/^BILIBILI_BILITICKET=.*$/m, `BILIBILI_BILITICKET=${biliTicket}`);
+        const values: Record<string, string> = {
+            BILIBILI_SESSDATA: sessdata,
+            BILIBILI_BILI_JCT: biliJct,
+        };
+        if (biliTicket) values.BILIBILI_BILITICKET = biliTicket;
+
+        const appended: string[] = [];
+        for (const [key, val] of Object.entries(values)) {
+            const re = new RegExp(`^${key}=.*$`, 'm');
+            if (re.test(content)) {
+                content = content.replace(re, `${key}=${val}`);
+            } else {
+                appended.push(`${key}=${val}`);
+            }
+        }
+        if (appended.length) {
+            if (!content.endsWith('\n')) content += '\n';
+            content += '\n# 由 bilibili-qrcode 扫码登录自动追加\n' + appended.join('\n') + '\n';
+            console.log(`[qrcode-write-env] .env 缺少 ${appended.length} 个键，已追加: ${appended.map((l) => l.split('=')[0]).join(',')}`);
         }
         fs.writeFileSync(envPath, content, 'utf8');
 

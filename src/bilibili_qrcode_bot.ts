@@ -80,13 +80,13 @@ export async function runBiliQrcodeLogin(
     }
 
     if (!qrcodeImg) {
-      console.warn('[qrcode-bot] 找不到二维码元素，截整页');
+      console.warn('[qrcode-bot] 找不到二维码元素，截取整页视口（登录页二维码居中显示）');
     }
 
-    // 截屏二维码
+    // 截屏二维码；找不到元素时截整个视口（1280x800），不要截左上角——B 站登录框居中，左上角是空的
     const png = qrcodeImg
       ? await qrcodeImg.screenshot()
-      : await page.screenshot({ clip: { x: 0, y: 0, width: 400, height: 400 } });
+      : await page.screenshot();
     const pngBase64 = png.toString('base64');
 
     if (opts.onQrcodeReady) {
