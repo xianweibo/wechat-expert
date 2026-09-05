@@ -1,0 +1,11 @@
+# 公众号文章 URL 列表（每行一个）
+# 填完后用 ingest_url_list.py 转换成 JSON，再用 fetch_articles.py 抓正文
+#
+# 怎么拿 URL：
+#   1) 浏览器打开 https://mp.weixin.qq.com/ 登录你的公众号
+#   2) 内容与互动 -> 图文素材 / 群发 -> 找一篇点 "复制链接" 或者直接复制浏览器地址
+#   3) 粘贴到下面，每行一个
+#
+# 例：
+# http://mp.weixin.qq.com/s?__biz=MzU0MzU1ODI3MA==&mid=2247483975&idx=1&sn=7d157bf9076cbcaca5bbd28004f79d40&chksm=fb08dd56cc7f5440fe8919bd163644eea6f15b9751d6ff023cd7b7fc2fc5ee3639b7f3b2ea19#rd
+# https://mp.weixin.qq.com/s?__biz=...&mid=...&idx=1&sn=...

@@ -1,0 +1,13 @@
+- [x] `generate_cover_prompt` 的 system prompt 已改为财经媒体风格（深色背景 + 数据可视化 + 红绿涨跌 + 标题关键词视觉化），不再用 anime 金融终端风格
+- [x] server.py 新增 `modelscope_cover_image(prompt)` 函数，正确调用魔搭 `/v1/images/generations` 异步接口 + 轮询 `/v1/tasks/{task_id}`
+- [x] server.py 的 `MoTa_API_KEY` 环境变量从 `.env` 正确读取（不是硬编码）
+- [x] server.py 默认模型为 FLUX，size 为 `1024x576`（16:9）
+- [x] server.py 封面生成失败时回退到 MiniMax `image-01-live`，再失败抛错（不用硬编码 COVER_IMAGE_URL）
+- [x] src/index.ts 的 `generateCoverImageModelScope` 与 server.py 行为一致
+- [x] src/index.ts 的 prompt 与 server.py 的 prompt 文本一致
+- [x] NAS `.env` 已加 `MoTa_API_KEY=ms-afb56c75-90a2-4585-b04f-0e77ee379fff`
+- [x] NAS `gzh-txh-api` 容器重启后 `/health` 返回 `{"ok": true, ...}`
+- [x] 阿里云 `gzh-expert-app` 容器重启后 `/api/health` 返回 `{"status":"ok"}`
+- [x] 用真实 BVID 调 NAS `/api/gzh/draft`，日志显示走魔搭（`[5/8] modelscope cover`）
+- [x] 生成的封面图与标题内容相关（如"美联储按兵不动"→含暂停/利率走平元素，非泛泛图表）
+- [x] 临时改错魔搭 key 后，确认自动回退 MiniMax 成功出图

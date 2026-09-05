@@ -305,6 +305,58 @@ NAS (每日)
 
 ---
 
+## 🧠 语言风格 RAG 档案（v2 流程）
+
+> 目标：让 AI 写稿时模仿**你本人**的公众号口吻，而不是默认语调。
+
+### 架构
+
+```
+[公众号已发表文章] --freepublish API--> [markdown]
+       --ingest_to_chroma--> [ChromaDB :8100/gzh_articles]
+       --analyze_style(MiniMax-M3)--> [style_summary.txt]
+                                            |
+                                  写新文章时 RAG 检索拼 prompt
+```
+
+### 一键刷新（在 NAS 上跑）
+
+```bash
+sudo bash scripts/refresh_style.sh
+```
+
+脚本会自动：
+1. 探活 `gzh-chroma` 容器；挂了拉起来
+2. `python3 scripts/fetch_mp_articles.py` —— 用 `/tmp/.mp_app_secret` 走 `freepublish/list` 拉全部已发表，HTML 转 markdown 落到 `/vol2/1000/docker_related/gzh-chroma/articles/`
+3. `python3 scripts/ingest_to_chroma.py` —— 分块 1200 字重叠 150 入 `gzh_articles` collection
+4. `python3 scripts/analyze_style.py` —— RAG 检索 8 篇 + MiniMax-M3 总结口吻，落到 `style_summary.txt`
+
+### 沙箱/本地无 NAS 时的降级路径
+
+```bash
+# 把 NAS 上的 articles/ 拉下来
+scp -P 22 -i ~/.ssh/id_ed25519 nas-gzh:/vol2/1000/docker_related/gzh-chroma/articles ./articles_local
+# 本地分析（需要 MINIMAX_KEY）
+MINIMAX_KEY=sk-... python3 scripts/style_bridge.py articles_local/*.md > style_summary.txt
+# 再 scp 回去
+scp style_summary.txt nas-gzh:/vol2/1000/docker_related/gzh-chroma/
+```
+
+### 新增/修改的脚本
+
+| 文件 | 作用 |
+|---|---|
+| `scripts/fetch_mp_articles.py` | 公众号 API 拉发表列表 + HTML → markdown |
+| `scripts/refresh_style.sh` | 6 步一键流水线 |
+| `scripts/style_bridge.py` | 沙箱离线分析（不需要 chromadb 连通）|
+
+### 风控提醒
+
+总结风格时**不要让模型写"具体股票/价位/承诺收益"**——这些是被禁的。
+风格 prompt 里只让模型学"句式、用词、节奏"，不要让模型学"内容观点"。
+
+---
+
 ## 📚 关键文档索引
 
 | 文档 | 路径 | 用途 |

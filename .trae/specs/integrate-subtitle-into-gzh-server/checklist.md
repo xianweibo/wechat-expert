@@ -1,0 +1,24 @@
+# Checklist
+
+- [ ] gzh_v2_server.py bilibili_view 返回 dict 包含 cid 字段
+- [ ] gzh_v2_server.py 新增 bilibili_subtitle(bvid, cid) 函数，调 mp_proxy 的 bilibili-subtitle 端点
+- [ ] gzh_v2_server.py bilibili_subtitle 字幕为空时返回空字符串（不抛异常）
+- [ ] gzh_v2_server.py minimax_summary 新增 subtitle 参数
+- [ ] gzh_v2_server.py minimax_summary prompt 字幕非空时以字幕为唯一数据源
+- [ ] gzh_v2_server.py minimax_summary prompt 字幕为空时降级用 title+desc
+- [ ] gzh_v2_server.py minimax_summary prompt 强制每个要点首句加粗
+- [ ] gzh_v2_server.py process_draft 插入"拿字幕"步骤
+- [ ] gzh_v2_server.py process_draft 字幕为空时降级用 title+desc 并记日志
+- [ ] gzh_v2_server.py build_html top 删除"没想到啊，我才没休息几天又可以玩了。"
+- [ ] gzh_v2_server.py build_html 三行声明加 `<strong>` 加粗
+- [ ] gzh_v2_server.py build_html FYI 标题从"参考资料"改为"FYI"
+- [ ] gzh_v2_server.py _summary_to_html 每段单独 `<p>`
+- [ ] gzh_v2_server.py _summary_to_html 段落间 `<p></p>` 留白
+- [ ] gzh_v2_server.py _summary_to_html 无加粗时首句自动加 `<strong>`
+- [ ] gzh_v2_server.py _summary_to_html 已有加粗时不重复加粗
+- [ ] gzh_v2_server.py 已部署到阿里云并重启
+- [ ] /health 端点返回正常
+- [ ] 端到端调用 /api/gzh/draft 确认走新流程
+- [ ] 新草稿 HTML 顶部无"没想到啊"
+- [ ] 新草稿 HTML 段落有留白、首句加粗
+- [ ] 新草稿 HTML FYI 标题为 FYI

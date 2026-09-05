@@ -1,21 +1,27 @@
 import requests
 import json
 import sys
+import os
 
-API_KEY = "sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo"
+API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 API_URL = "https://api.minimaxi.com/anthropic/v1/messages"
+
+if not API_KEY:
+    print("错误: 环境变量 MINIMAX_API_KEY 未设置")
+    sys.exit(1)
 
 with open("/tmp/subtitle-clean.txt", "r", encoding="utf-8") as f:
     subtitle = f.read()
 
-prompt = f"""请根据以下B站视频字幕，生成一段适合公众号发布的精华总结。
+prompt = f"""请根据以下B站视频字幕，生成适合公众号发布的精华总结。
 
 要求：
-1. 提取核心要点，3-5条
+1. 提取核心要点，分5-8个要点详细展开
 2. 用通俗易懂的语言，不复述原话，用自己的语言重构
 3. 保持中立，不预测涨跌
-4. 篇幅控制在300字以内
+4. 篇幅控制在1000字左右，内容要充实有深度
 5. 适合财经/新闻类公众号读者
+6. 每个要点要有充分的论述和分析，不要只是简单罗列
 
 字幕内容：
 {subtitle}
@@ -30,7 +36,7 @@ headers = {
 
 data = {
     "model": "MiniMax-M2.7",
-    "max_tokens": 800,
+    "max_tokens": 2048,
     "messages": [{"role": "user", "content": prompt}]
 }
 

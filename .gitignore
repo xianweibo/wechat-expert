@@ -46,13 +46,33 @@ scripts/.env
 /tmp/.env
 /tmp/.mp_*
 
-# FRPÅäÖÃ°üº¬Ãô¸ĞĞÅÏ¢£¬²»Ìá½»
+# FRPï¿½ï¿½ï¿½Ã°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½á½»
 scripts/frps*.ini
 
-# Ãô¸ĞÃÜÔ¿ÎÄ¼ş
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½Ä¼ï¿½
 *.key
 *.pem
 auth.json
 
-# ÁÙÊ±ÎÄ¼ş
+# SSH Key backups (NEVER commit)
+id_ed25519.backup*
+
+# temp
 *.tmp
+
+# ===== æ ¹ç›®å½•ä¸€æ¬¡æ€§è¯Šæ–­/ä¸´æ—¶æ–‡ä»¶ï¼ˆ2026-09-05 æ¸…ç†ï¼‰=====
+_*.ps1
+_*.json
+_*.toml
+_diag*
+aliyun_env.txt
+curl_*
+*_out.txt
+*_stderr.txt
+*_stdout.txt
+amend_*.ps1
+apply_*.ps1
+api_check_*.ps1
+check_*.ps1
+cleanup_*.ps1
+commit_*.ps1

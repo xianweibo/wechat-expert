@@ -1,0 +1,12 @@
+- [ ] server.py 的 `generate_cover_prompt` system prompt 已改为强制概念拆解（Concepts: 列出所有核心概念）
+- [ ] server.py prompt 长度要求改为 100-200 词（覆盖多概念）
+- [ ] server.py 日志行 `log.info("[cover] prompt: %s", prompt[:200])` 改为完整打印（去掉 [:200]）
+- [ ] server.py 兜底 prompt 含多概念视觉化示例
+- [ ] src/index.ts 的 `generateCoverPrompt` system prompt 与 server.py 文本一致
+- [ ] src/index.ts 日志行改为完整打印
+- [ ] src/index.ts 兜底 prompt 与 server.py 一致
+- [ ] NAS 容器已重建（force-recreate），/health 返回正常
+- [ ] 测试 BVID 日志含完整 prompt（不截断）
+- [ ] prompt 含 "Concepts:" 行，列出标题所有核心概念
+- [ ] prompt 视觉化了每个概念（不只是最显眼的一个）
+- [ ] 生成的封面图比之前更贴题

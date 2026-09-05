@@ -13,6 +13,9 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./data/uploads:/app/uploads
+      # .env 绑定挂载：配合 .dockerignore（不打入镜像），扫码登录写 .env
+      # 时直接落盘到宿主机，重启/重建容器均不丢失
+      - ./.env:/app/.env
     depends_on:
       postgres:
         condition: service_healthy

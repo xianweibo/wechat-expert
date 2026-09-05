@@ -21,30 +21,30 @@ export async function generateSummary(
 ${subtitleText || '（无字幕）'}
 
 要求：
-- 提取核心要点，3-5 条
+- 提取核心要点，分5-8个要点详细展开
 - 用通俗易懂的语言
 - 不复述原话，用自己语言重构
 - 保持中立，不预测涨跌
-- 篇幅控制在 300 字以内
-- 最后附上原视频链接：https://www.bilibili.com/video/${bvid}`;
+- 篇幅控制在1000字左右，内容要充实有深度
+- 每个要点要有充分的论述和分析，不要只是简单罗列`;
 
   console.log('[MiniMax] 发送总结请求...');
 
   return withRetry(async () => {
     const response = await axios.post(
-      'https://api.minimax.chat/v1/text/chatcompletion_v2',
+      'https://api.minimaxi.com/anthropic/v1/messages',
       {
-        model: 'MiniMax-Text-01',
+        model: 'MiniMax-M2.7',
+        max_tokens: 2048,
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1000,
-        temperature: 0.7,
       },
       {
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         },
-        timeout: 60000,
+        timeout: 120000,
       }
     );
 
@@ -52,7 +52,21 @@ ${subtitleText || '（无字幕）'}
       throw new Error(`MiniMax API 错误: ${response.data.error.message}`);
     }
 
-    const summary = response.data.choices?.[0]?.message?.content || '';
+    // Anthropic 兼容接口返回 content 数组
+    let summary = '';
+    const content = response.data.content;
+    if (Array.isArray(content)) {
+      for (const item of content) {
+        if (item.type === 'text') {
+          summary = item.text || '';
+          break;
+        }
+      }
+    }
+    // fallback: OpenAI 格式
+    if (!summary) {
+      summary = response.data.choices?.[0]?.message?.content || '';
+    }
     return { summary, keyPoints: [] };
   }, 'MiniMax');
 }

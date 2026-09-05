@@ -1,6 +1,6 @@
 [common]
 bindPort = 39802
-auth.token = "StockAgent_2025_Token"
+auth.token = "${FRP_AUTH_TOKEN}"
 
 [gzh_expert_http]
 type = "http"

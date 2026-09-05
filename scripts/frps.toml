@@ -1,5 +1,5 @@
 [common]
 bindPort = 37000
-auth.token = "StockAgent_2025_Token"
+auth.token = "${FRP_AUTH_TOKEN}"
 webServer.port = 37001
-webServer.password = "admin123"
+webServer.password = "${FRP_WEB_PASSWORD}"
