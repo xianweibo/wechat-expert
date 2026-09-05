@@ -7,7 +7,9 @@ services:
     container_name: gzh-expert-app
     restart: unless-stopped
     ports:
-      - "39800:3000"
+      # 只绑定宿主机回环：公网无法直连，宿主机上的宝塔 nginx 通过
+      # 127.0.0.1:39800 反代访问；外部操作走 SSH 隧道或域名(HTTPS)
+      - "127.0.0.1:39800:3000"
     env_file:
       - .env
     volumes:

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import * as fs from 'fs';
 import mpProxy from './mp_proxy';
@@ -56,8 +57,19 @@ loadStyleSummary();
 
 app.use(helmet());
 app.use(cors());
-app.use(morgan('combined'));
+// 经 nginx 反代，取真实客户端 IP 做限流
+app.set('trust proxy', 1);
+// 日志打码：URL 里的 secret/token 参数不落日志（否则密钥明文进日志文件）
+morgan.token('safeurl', (req: express.Request) =>
+  (req.url || '').replace(/([?&])(secret|token)=([^&]*)/gi, '$1$2=***')
+);
+app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :safeurl HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"'));
 app.use(express.json({ limit: '10mb' }));
+
+// 全局限流：单 IP 5 分钟 600 次
+app.use(rateLimit({ windowMs: 5 * 60 * 1000, limit: 600, standardHeaders: 'draft-7', legacyHeaders: false }));
+// 管理端点单独收紧：单 IP 5 分钟 100 次
+const adminLimiter = rateLimit({ windowMs: 5 * 60 * 1000, limit: 100, standardHeaders: 'draft-7', legacyHeaders: false });
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -748,7 +760,9 @@ function rememberDraft(key: string, mediaId: string, title: string, mode: string
 
 void initDraftStore(processedBvids);
 
-app.post('/api/bilibili/summary', async (req, res) => {
+// 触发 LLM+出图，开销大：单 IP 15 分钟最多 10 次
+const summaryLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false });
+app.post('/api/bilibili/summary', summaryLimiter, async (req, res) => {
   const workerSecret = req.headers['x-worker-secret'];
   if (!GZH_WORKER_SECRET || workerSecret !== GZH_WORKER_SECRET) {
     res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -860,7 +874,7 @@ app.post('/api/bilibili/summary', async (req, res) => {
   }
 });
 
-app.use('/api/admin', mpProxy);
+app.use('/api/admin', adminLimiter, mpProxy);
 
 // ---- B 站 SESSDATA 保鲜定时任务 ----
 // 每 6 小时调一次 /x/web-interface/nav，让 B 站服务端认为该 SESSDATA 仍在活跃使用，避免被吊销
