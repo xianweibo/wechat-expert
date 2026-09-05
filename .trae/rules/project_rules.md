@@ -66,7 +66,7 @@
 
 ## 3. 微信 + 草稿操作（沿用之前的约定）
 
-- mp_proxy secret: `cBsFHdghYA1W07VpultIKEynOSQwNM8z`（Header `X-Worker-Secret`）
+- mp_proxy secret: `（已脱敏：值只存服务器 .env，勿提交到 Git）`（Header `X-Worker-Secret`）
 - 草稿清理要成对：建新的前先 `mp-draft-delete` 老的
 - 封面两步：先 `mp-material-image-add` 拿 `thumb_media_id`，再 `mp-draft-add` 时用
 

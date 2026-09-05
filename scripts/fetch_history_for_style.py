@@ -21,7 +21,7 @@ import time
 
 MP_PROXY = "8.134.248.11"
 MP_PORT = 39800
-SECRET = "cBsFHdghYA1W07VpultIKEynOSQwNM8z"
+SECRET = os.environ.get('BILIBILI_WORKER_SECRET', '')
 OUT_DIR = r"C:\Users\Docker\AppData\Local\Temp\articles"
 
 

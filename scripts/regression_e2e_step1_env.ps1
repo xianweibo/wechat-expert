@@ -7,7 +7,7 @@ $ALIYUN = '8.134.248.11'
 $ALIYUN_SSH_PORT = 22
 $ALIYUN_USER = 'gongzhonghao'
 $SSH_KEY = "$env:USERPROFILE\.ssh\id_ed25519"
-$WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+$WORKER_SECRET = $env:BILIBILI_WORKER_SECRET
 
 # SESSDATA 和 bili_jct (从 .env 拿, 失败则用占位)
 $envFile = 'Z:\代码\养龙虾\公众号专家\gzh-worker\.env'

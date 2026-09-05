@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 APP_ID="wx567a639466e247cd"
-APP_SECRET="fc7252e95b7d8dae7027b9a87874f00a"
+APP_SECRET="${WECHAT_APP_SECRET:?need WECHAT_APP_SECRET in env}"
 
 TOKEN=$(curl -sS "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APP_ID}&secret=${APP_SECRET}" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('access_token',''))")
 echo "TOKEN=${TOKEN:0:20}..."

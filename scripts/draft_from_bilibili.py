@@ -20,7 +20,7 @@ from datetime import datetime
 UP_UID = 290663424
 MINIMAX_API_KEY = os.environ.get(
     "MINIMAX_API_KEY",
-    "sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo",
+    os.environ.get('MINIMAX_API_KEY', ''),
 )
 SESSDATA = os.environ.get(
     "BILIBILI_SESSDATA",

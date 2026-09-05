@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-SECRET="cBsFHdghYA1W07VpultIKEynOSQwNM8z"
+SECRET="${BILIBILI_WORKER_SECRET:?need BILIBILI_WORKER_SECRET in env}"
 APP="http://127.0.0.1:39800"
 
 echo "=== 1) /api/v2/heartbeat ==="

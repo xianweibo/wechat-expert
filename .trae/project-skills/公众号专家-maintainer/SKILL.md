@@ -38,7 +38,7 @@ description: "Maintains 公众号专家 project using Session-based Worktree + B
 
 ### B站 Worker
 - SESSDATA + bili_jct: 存放于 NAS `/tmp/auth.txt`
-- MiniMax API Key: `sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo`
+- MiniMax API Key: `（已脱敏：值只存服务器 .env，勿提交到 Git）`
 - MiniMax Endpoint: `https://api.minimaxi.com/anthropic/v1/messages`
 - MiniMax Model: `MiniMax-M2.7`
 
@@ -47,7 +47,7 @@ description: "Maintains 公众号专家 project using Session-based Worktree + B
 - 我的UID: `144796213`
 
 ### API 认证
-- BILIBILI_WORKER_SECRET: `gzh_worker_secret_2026`
+- BILIBILI_WORKER_SECRET: `（已脱敏：值只存服务器 .env，勿提交到 Git）`
 - 位置：阿里云 `.env` + NAS 推送时用 `X-Worker-Secret` header
 
 ---

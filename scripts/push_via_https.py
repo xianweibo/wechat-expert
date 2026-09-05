@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """Push summary to Aliyun via HTTPS endpoint."""
 import requests
@@ -14,7 +15,7 @@ else:
     sys.exit(1)
 
 ALIYUN_URL = 'https://gzh.relexplace.com/api/bilibili/summary'
-WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+WORKER_SECRET = os.environ.get('BILIBILI_WORKER_SECRET', '')
 
 payload = {
     "title": "《第六百九一期》中欧贸易摩擦烈度上升，是否会影响中国产业出口？欧洲的未来在何方？",

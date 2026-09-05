@@ -28,20 +28,20 @@ sudo -n docker compose -f docker-compose.yml up -d --build app 2>&1 | tail -n 20
 echo "==> wait & test"
 sleep 6
 APP_ID="wx567a639466e247cd"
-APP_SECRET="fc7252e95b7d8dae7027b9a87874f00a"
+APP_SECRET="${WECHAT_APP_SECRET:?need WECHAT_APP_SECRET in env}"
 CONTAINER=$(sudo -n docker ps --filter name=gzh-expert-app -q | head -n1)
 TOKEN=$(sudo -n docker exec "$CONTAINER" wget -qO- "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APP_ID}&secret=${APP_SECRET}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("access_token",""))')
 echo "token=${TOKEN:0:20}..."
 
 echo "=== test /api/admin/mp-published ==="
 curl -s -X POST http://127.0.0.1:39800/api/admin/mp-published \
-    -H "X-Worker-Secret: cBsFHdghYA1W07VpultIKEynOSQwNM8z" \
+    -H "X-Worker-Secret: ${BILIBILI_WORKER_SECRET:?need BILIBILI_WORKER_SECRET in env}" \
     -H "Content-Type: application/json" \
     --data '{}' | python3 -c 'import sys,json; d=json.load(sys.stdin); print(json.dumps({k: (len(v) if isinstance(v,list) else v) for k,v in d.items()}, ensure_ascii=False))'
 
 echo
 echo "=== test /api/admin/mp-articles-all ==="
 curl -s -X POST http://127.0.0.1:39800/api/admin/mp-articles-all \
-    -H "X-Worker-Secret: cBsFHdghYA1W07VpultIKEynOSQwNM8z" \
+    -H "X-Worker-Secret: ${BILIBILI_WORKER_SECRET:?need BILIBILI_WORKER_SECRET in env}" \
     -H "Content-Type: application/json" \
     --data '{}' | python3 -c 'import sys,json; d=json.load(sys.stdin); a=d.get("articles",[]); print(f"total={d.get(\"total\")} got={len(a)}"); [print(f"  - {x[\"publish_time\"]} | {x[\"title\"][:50]} | {len(x[\"content\"])} chars | {x[\"author\"]}") for x in a]'

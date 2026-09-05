@@ -1,10 +1,11 @@
+import os
 import json
 import subprocess
 import sys
 from typing import List, Optional, Dict, Any
 
 APP_ID = "wx567a639466e247cd"
-APP_SECRET = "fc7252e95b7d8dae7027b9a87874f00a"
+APP_SECRET = os.environ.get('WECHAT_APP_SECRET', '')
 OUT_JSON = "/tmp/mp_articles_full.json"
 OUT_INDEX = "/tmp/mp_articles_index.json"
 CONTAINER_FILTER = "gzh-expert-app"

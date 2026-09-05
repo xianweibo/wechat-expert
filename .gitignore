@@ -76,3 +76,6 @@ api_check_*.ps1
 check_*.ps1
 cleanup_*.ps1
 commit_*.ps1
+
+# ===== 本地归档（历史临时文件，不入库）=====
+_archive/

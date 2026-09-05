@@ -12,14 +12,14 @@ ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
-SESSDATA = '9fb95afb,1795256344,43e54*51CjAlmSYF2CH2QPDlel40zhHknLUG0zLS9x1C8VJBhYlvj-igRAJ42mi24uxddTIE5FkSVldMZmFrQXFDOTl1OTJGdVVVaUtXY0RJOUFFcFJTV01heFBuSnNtLXdQNzdxdzVrall4Tk0tWEZ5S25RMmpmRWR6c3FBTXh5ZU9vckpKX1JLMHdMVFh3IIEC'
-BILI_JCT = 'de6ed23d674a50a73865adae67069017'
-MINIMAX_KEY = 'sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo'
+SESSDATA = os.environ.get('BILIBILI_SESSDATA', '')
+BILI_JCT = os.environ.get('BILIBILI_BILI_JCT', '')
+MINIMAX_KEY = os.environ.get('MINIMAX_API_KEY', '')
 BVID = 'BV1wmES6FE7M'
 ALIYUN = '8.134.248.11'
 ALIYUN_USER = 'gongzhonghao'
 SSH_KEY = r'C:\Users\Administrator\.ssh\id_ed25519'
-WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+WORKER_SECRET = os.environ.get('BILIBILI_WORKER_SECRET', '')
 
 
 def curl_get(url, extra_headers=None):

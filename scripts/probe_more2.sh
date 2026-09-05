@@ -1,6 +1,6 @@
 #!/bin/bash
 APP_ID="wx567a639466e247cd"
-APP_SECRET="fc7252e95b7d8dae7027b9a87874f00a"
+APP_SECRET="${WECHAT_APP_SECRET:?need WECHAT_APP_SECRET in env}"
 CONTAINER=$(docker ps --filter name=gzh-expert-app -q | head -n1)
 echo "container=$CONTAINER"
 TOKEN=$(docker exec "$CONTAINER" wget -qO- "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APP_ID}&secret=${APP_SECRET}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("access_token",""))')

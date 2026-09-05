@@ -13,9 +13,9 @@ else:
     print("Usage: python3 push_via_aliyun.py <title> <description> <bvid> <pubdate>")
     sys.exit(1)
 
-MINIMAX_API_KEY = 'sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo'
+MINIMAX_API_KEY = os.environ.get('MINIMAX_API_KEY', '')
 ALIYUN_API_URL = 'http://127.0.0.1:39800/api/bilibili/summary'
-WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+WORKER_SECRET = os.environ.get('BILIBILI_WORKER_SECRET', '')
 
 from datetime import datetime
 published_at = datetime.fromtimestamp(pubdate).strftime('%Y-%m-%d') if pubdate else datetime.now().strftime('%Y-%m-%d')

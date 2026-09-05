@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """Retry fetch latest BiliBili videos with longer backoff."""
 import json
@@ -10,8 +11,8 @@ ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
-SESSDATA = '9fb95afb,1795256344,43e54*51CjAlmSYF2CH2QPDlel40zhHknLUG0zLS9x1C8VJBhYlvj-igRAJ42mi24uxddTIE5FkSVldMZmFrQXFDOTl1OTJGdVVVaUtXY0RJOUFFcFJTV01heFBuSnNtLXdQNzdxdzVrall4Tk0tWEZ5S25RMmpmRWR6c3FBTXh5ZU9vckpKX1JLMHdMVFh3IIEC'
-BILI_JCT = 'de6ed23d674a50a73865adae67069017'
+SESSDATA = os.environ.get('BILIBILI_SESSDATA', '')
+BILI_JCT = os.environ.get('BILIBILI_BILI_JCT', '')
 UP_UID = 290663424
 
 

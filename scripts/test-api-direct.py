@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 import requests
 import json
@@ -5,7 +6,7 @@ import json
 url = "http://127.0.0.1:39800/api/bilibili/summary"
 headers = {
     "Content-Type": "application/json",
-    "X-Worker-Secret": "cBsFHdghYA1W07VpultIKEynOSQwNM8z"
+    "X-Worker-Secret": os.environ.get('BILIBILI_WORKER_SECRET', '')
 }
 payload = {
     "title": "test",

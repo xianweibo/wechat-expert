@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """Regression test: fetch latest charged video, generate summary, push to WeChat draft."""
 import requests
@@ -7,11 +8,11 @@ import time
 
 # Config
 UP_UID = 290663424
-SESSDATA = '9fb95afb,1795256344,43e54*51CjAlmSYF2CH2QPDlel40zhHknLUG0zLS9x1C8VJBhYlvj-igRAJ42mi24uxddTIE5FkSVldMZmFrQXFDOTl1OTJGdVVVaUtXY0RJOUFFcFJTV01heFBuSnNtLXdQNzdxdzVrall4Tk0tWEZ5S25RMmpmRWR6c3FBTXh5ZU9vckpKX1JLMHdMVFh3IIEC'
-BILI_JCT = 'de6ed23d674a50a73865adae67069017'
-MINIMAX_API_KEY = 'sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo'
+SESSDATA = os.environ.get('BILIBILI_SESSDATA', '')
+BILI_JCT = os.environ.get('BILIBILI_BILI_JCT', '')
+MINIMAX_API_KEY = os.environ.get('MINIMAX_API_KEY', '')
 ALIYUN_API_URL = 'http://8.134.248.11:3000/api/bilibili/summary'
-WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+WORKER_SECRET = os.environ.get('BILIBILI_WORKER_SECRET', '')
 
 cookies = {'SESSDATA': SESSDATA, 'bili_jct': BILI_JCT}
 req_headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Referer': 'https://www.bilibili.com/'}

@@ -6,13 +6,13 @@ $ALIYUN = '8.134.248.11'
 $ALIYUN_PORT = 22
 $ALIYUN_USER = 'gongzhonghao'
 $SSH_KEY = "$env:USERPROFILE\.ssh\id_ed25519"
-$WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+$WORKER_SECRET = $env:BILIBILI_WORKER_SECRET
 $TARGET_UP_UID = 290663424
 
 # From NAS gzh-worker container env
-$SESSDATA = '9fb95afb,1795256344,43e54*51CjAlmSYF2CH2QPDlel40zhHknLUG0zLS9x1C8VJBhYlvj-igRAJ42mi24uxddTIE5FkSVldMZmFrQXFDOTl1OTJGdVVVaUtXY0RJOUFFcFJTV01heFBuSnNtLXdQNzdxdzVrall4Tk0tWEZ5S25RMmpmRWR6c3FBTXh5ZU9vckpKX1JLMHdMVFh3IIEC'
-$BILI_JCT = 'de6ed23d674a50a73865adae67069017'
-$MINIMAX_KEY = 'sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo'
+$SESSDATA = $env:BILIBILI_SESSDATA
+$BILI_JCT = $env:BILIBILI_BILI_JCT
+$MINIMAX_KEY = $env:MINIMAX_API_KEY
 
 function Log([string]$msg) { Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $msg" }
 function LogOk([string]$msg) { Write-Host "[$(Get-Date -Format 'HH:mm:ss')] [OK] $msg" -ForegroundColor Green }

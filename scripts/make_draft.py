@@ -10,7 +10,7 @@ import urllib.request
 
 MINIMAX_KEY = os.environ.get(
     "MINIMAX_API_KEY",
-    "sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo",
+    os.environ.get('MINIMAX_API_KEY', ''),
 )
 STYLE_PATH = "/vol2/1000/docker_related/gzh-chroma/style_summary.txt"
 OUT = "/vol2/1000/docker_related/gzh-chroma/drafts/draft_20260612_BV1bZEr6JEDM.md"

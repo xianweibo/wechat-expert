@@ -1,10 +1,10 @@
 # Regression Test - Full Pipeline using curl.exe
 $ErrorActionPreference = 'Continue'
 
-$SESSDATA = '9fb95afb%2C1795256344%2C43e54*51CjAlmSYF2CH2QPDlel40zhHknLUG0zLS9x1C8VJBhYlvj-igRAJ42mi24uxddTIE5FkSVldMZmFrQXFDOTl1OTJGdVVVaUtXY0RJOUFFcFJTV01heFBuSnNtLXdQNzdxdzVrall4Tk0tWEZ5S25RMmpmRWR6c3FBTXh5ZU9vckpKX1JLMHdMVFh3IIEC'
-$MINIMAX_KEY = 'sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo'
+$SESSDATA = $env:BILIBILI_SESSDATA
+$MINIMAX_KEY = $env:MINIMAX_API_KEY
 $ALIYUN_URL = 'http://8.134.248.11:3000/api/bilibili/summary'
-$WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+$WORKER_SECRET = $env:BILIBILI_WORKER_SECRET
 
 Write-Output "=================================================="
 Write-Output "Regression Test - Full Pipeline"

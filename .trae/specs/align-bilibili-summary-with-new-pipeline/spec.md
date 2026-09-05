@@ -29,7 +29,7 @@ yuanbao 调用的是阿里云 Node.js 服务的 `/api/bilibili/summary` 端点�
 - **新增** 环境变量（写入阿里云 `.env`，`docker-compose.yml` 已通过 `env_file` 自动加载）：
   - `ARK_BASE_URL`、`ARK_API_KEY`、`ARK_MODEL`
   - `MINIMAX_API_KEY`、`MINIMAX_IMAGE_MODEL`（image-01-live）
-  - `GZH_WORKER_SECRET`（mp_proxy 的 `X-Worker-Secret`，值 `cBsFHdghYA1W07VpultIKEynOSQwNM8z`）
+  - `GZH_WORKER_SECRET`（mp_proxy 的 `X-Worker-Secret`，值 `（已脱敏：值只存服务器 .env，勿提交到 Git）`）
   - `DEFAULT_AUTHOR`（`小喇叭大只讲`）
   - `STYLE_PATH`（指向 `style_summary.txt` 绝对路径）
 - **删除** `src/index.ts` 里旧的 `generateArticleContent` 函数（含"由 AI 生成"声明，违反 `project_rules.md`）

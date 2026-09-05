@@ -6,7 +6,7 @@ import urllib.request
 
 API_KEY = os.environ.get(
     "MINIMAX_API_KEY",
-    "sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo",
+    os.environ.get('MINIMAX_API_KEY', ''),
 )
 
 # MiniMax image generation endpoints

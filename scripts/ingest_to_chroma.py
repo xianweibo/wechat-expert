@@ -21,7 +21,7 @@ ARTICLES_DIR = os.environ.get("ARTICLES_DIR", "/vol2/1000/docker_related/gzh-chr
 
 MINIMAX_API_KEY = os.environ.get(
     "MINIMAX_API_KEY",
-    "sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo",
+    os.environ.get('MINIMAX_API_KEY', ''),
 )
 EMBED_URL = "https://api.minimaxi.com/v1/embeddings"
 EMBED_MODEL = "embo-01"

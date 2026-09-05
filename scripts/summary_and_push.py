@@ -15,10 +15,10 @@ else:
     print("Usage: python3 summary_and_push.py <title> <description> <bvid> <pubdate>")
     sys.exit(1)
 
-MINIMAX_API_KEY = 'sk-cp-w8aacTTOBqlc9U42O6cf4oc79uUyXuD5DZRO6ZoY4Zh09qQR31q5AgWKdlV9JaRBRQ_u8QSJe_CsPY936nEzMQ3J0exlNQ71c9958P4i9xNjd8cWD3Cyjlo'
+MINIMAX_API_KEY = os.environ.get('MINIMAX_API_KEY', '')
 # Use Aliyun API via frpc tunnel (NAS 39800 -> Aliyun 8.134.248.11:39802)
 ALIYUN_API_URL = 'http://8.134.248.11:39802/api/bilibili/summary'
-WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+WORKER_SECRET = os.environ.get('BILIBILI_WORKER_SECRET', '')
 
 # Disable worker auth (gzh-expert-app container doesn't have BILIBILI_WORKER_SECRET set)
 USE_AUTH = True

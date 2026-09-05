@@ -66,7 +66,7 @@ PYEOF
 echo "=== send ==="
 curl -sS --max-time 60 -X POST http://127.0.0.1:39800/api/admin/mp-draft-add \
   -H 'Content-Type: application/json' \
-  -H 'X-Worker-Secret: cBsFHdghYA1W07VpultIKEynOSQwNM8z' \
+  -H 'X-Worker-Secret: ${BILIBILI_WORKER_SECRET:?need BILIBILI_WORKER_SECRET in env}' \
   --data-binary @/tmp/draft_v6.json \
   -o /tmp/draft_v6_resp.json \
   -w 'HTTP %{http_code} size %{size_download}B\n'

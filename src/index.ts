@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import * as fs from 'fs';
 import mpProxy from './mp_proxy';
+import { initDraftStore, persistDraftRecord } from './db';
 
 // override: 容器 env_file 的值在容器创建时冻结，扫码登录后写入的新 cookie
 // 依赖 dotenv 在进程重启时覆盖旧值，否则 docker restart 后仍是过期登录态
@@ -732,16 +733,20 @@ function buildHtml(summary: string, fyiLinks: string[], title: string): string {
 }
 
 // ---- POST /api/bilibili/summary ----
-// 幂等缓存：bvid → media_id。推送方超时重试会导致重复建草稿，这里按 bvid 去重
+// 幂等缓存：bvid → media_id。推送方超时重试会导致重复建草稿，这里按 bvid 去重。
+// 内存为 L1，PostgreSQL draft_history 表为持久层（重启后由 initDraftStore 预加载）
 const processedBvids = new Map<string, string>();
 
-function rememberDraft(key: string, mediaId: string): void {
+function rememberDraft(key: string, mediaId: string, title: string, mode: string): void {
   processedBvids.set(key, mediaId);
   if (processedBvids.size > 100) {
     const oldest = processedBvids.keys().next().value;
     if (oldest) processedBvids.delete(oldest);
   }
+  void persistDraftRecord({ bvid: key, title, mediaId, mode }).catch(() => {});
 }
+
+void initDraftStore(processedBvids);
 
 app.post('/api/bilibili/summary', async (req, res) => {
   const workerSecret = req.headers['x-worker-secret'];
@@ -806,7 +811,7 @@ app.post('/api/bilibili/summary', async (req, res) => {
       const mediaId = await createDraft(draftTitle, html, thumbMediaId, DEFAULT_AUTHOR);
 
       console.log(`[summary] 完成 media_id=${mediaId}`);
-      if (dedupKey) rememberDraft(dedupKey, mediaId);
+      if (dedupKey) rememberDraft(dedupKey, mediaId, draftTitle, 'bvid');
       res.json({ success: true, media_id: mediaId });
     } catch (e: any) {
       console.error('[summary] 失败:', e.message);
@@ -847,7 +852,7 @@ app.post('/api/bilibili/summary', async (req, res) => {
     const mediaId = await createDraft(title, html, thumbMediaId, DEFAULT_AUTHOR);
 
     console.log(`[summary] 降级完成 media_id=${mediaId}`);
-    if (dedupKey) rememberDraft(dedupKey, mediaId);
+    if (dedupKey) rememberDraft(dedupKey, mediaId, title, 'degraded');
     res.json({ success: true, media_id: mediaId });
   } catch (e: any) {
     console.error('[summary] 降级失败:', e.message);

@@ -15,7 +15,7 @@ import urllib.request
 
 
 ALIYUN = os.environ.get("ALIYUN_APP_URL", "http://8.134.248.11:39800")
-SECRET = os.environ.get("BILIBILI_WORKER_SECRET", "cBsFHdghYA1W07VpultIKEynOSQwNM8z")
+SECRET = os.environ.get("BILIBILI_WORKER_SECRET", os.environ.get('BILIBILI_WORKER_SECRET', ''))
 DRAFT = "/vol2/1000/docker_related/gzh-chroma/drafts/draft_20260612_BV1bZEr6JEDM.md"
 
 

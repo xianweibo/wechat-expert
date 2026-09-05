@@ -18,7 +18,7 @@ import urllib.error
 
 
 MP_PROXY = "http://8.134.248.11:39800"
-SECRET = "cBsFHdghYA1W07VpultIKEynOSQwNM8z"
+SECRET = os.environ.get('BILIBILI_WORKER_SECRET', '')
 OUT_DIR = r"z:\代码\养龙虾\公众号专家\articles"
 COUNT = 10
 

@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """
 阿里云端推送脚本 — 调用 gzh-expert-app 容器的 /api/bilibili/summary 接口
@@ -7,7 +8,7 @@ import sys
 import requests
 
 ALIYUN_API_URL = 'http://127.0.0.1:39800/api/bilibili/summary'
-WORKER_SECRET = 'cBsFHdghYA1W07VpultIKEynOSQwNM8z'
+WORKER_SECRET = os.environ.get('BILIBILI_WORKER_SECRET', '')
 
 
 def push(title: str, content: str, bvid: str, aid: str) -> dict:

@@ -3,7 +3,7 @@
 set -e
 
 APP_ID="wx567a639466e247cd"
-APP_SECRET="fc7252e95b7d8dae7027b9a87874f00a"
+APP_SECRET="${WECHAT_APP_SECRET:?need WECHAT_APP_SECRET in env}"
 
 # Get access token
 echo "[1/3] Get access token..."
