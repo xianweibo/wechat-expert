@@ -18,6 +18,8 @@ services:
       # .env 绑定挂载：配合 .dockerignore（不打入镜像），扫码登录写 .env
       # 时直接落盘到宿主机，重启/重建容器均不丢失
       - ./.env:/app/.env
+      # 语言风格档案（NAS refresh_style.sh 产物，经本地中转拷贝而来）
+      - ./style_summary.txt:/app/style_summary.txt:ro
     depends_on:
       postgres:
         condition: service_healthy
