@@ -1021,3 +1021,117 @@ console.log('[init] B 站 SESSDATA 保鲜定时任务已启动（每 6 小时）
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`公众号专家 API 运行在 http://0.0.0.0:${PORT}`);
 });
+
+// ---- B 站 UP 主最新充电视频检查（每 6 小时）----
+// 目标 UP: 290663424（有何高见9527）。动态 API 曾于 2026-06 被风控(-352)，
+// 6 小时一次的频率很温和；若仍被封则如实报告，回退手动提供 BVID 的流程。
+const CHARGED_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const TARGET_UP_UID = 290663424;
+const BILI_REQ_HEADERS = () => ({
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Referer': `https://space.bilibili.com/${TARGET_UP_UID}/`,
+  'Cookie': `SESSDATA=${(process.env.BILIBILI_SESSDATA || '').trim()}; bili_jct=${(process.env.BILIBILI_BILI_JCT || '').trim()}`,
+});
+const biliSleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+interface ChargedCheckResult {
+  checkedAt: string;
+  ok: boolean;
+  reason: string;
+  bvid?: string;
+  title?: string;
+  pubdate?: number;
+  accessible?: boolean;
+  accessDetail?: string;
+}
+let lastChargedCheck: ChargedCheckResult = { checkedAt: '', ok: false, reason: '尚未运行' };
+
+async function biliJsonGet(url: string): Promise<any> {
+  const resp = await fetch(url, { headers: BILI_REQ_HEADERS() });
+  return await resp.json();
+}
+
+async function checkLatestChargedVideo(): Promise<ChargedCheckResult> {
+  const result: ChargedCheckResult = { checkedAt: new Date().toISOString(), ok: false, reason: '' };
+  try {
+    // 1) 动态 feed 拿最近视频（含 is_charging_arc 标记）
+    const feed = await biliJsonGet(
+      `https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid=${TARGET_UP_UID}`
+    );
+    if (feed.code !== 0) {
+      result.reason = `动态API不可用 code=${feed.code} msg=${feed.message}（B站风控，回退手动提供BVID）`;
+      console.warn(`[charged-check] ${result.reason}`);
+      return result;
+    }
+    const items: any[] = feed.data?.items || [];
+    let charged: any = null;
+    for (const item of items) {
+      const archive = item?.modules?.module_dynamic?.major?.archive;
+      if (archive?.bvid && archive.is_charging_arc === 1) {
+        charged = archive;
+        break;
+      }
+    }
+    if (!charged) {
+      result.ok = true;
+      result.reason = '动态列表里没有充电视频';
+      console.log(`[charged-check] ${result.reason}`);
+      return result;
+    }
+
+    // 2) view API 拿详情（阿里云白名单内），间隔≥2.5s 遵守风控约定
+    await biliSleep(2500);
+    const view = await biliJsonGet(`https://api.bilibili.com/x/web-interface/view?bvid=${charged.bvid}`);
+    if (view.code !== 0) {
+      result.reason = `view API 失败 code=${view.code} msg=${view.message}`;
+      console.warn(`[charged-check] ${result.reason}`);
+      return result;
+    }
+
+    // 3) player/v2 判断本账号能否打开充电专属内容
+    await biliSleep(2500);
+    const player = await biliJsonGet(
+      `https://api.bilibili.com/x/player/v2?bvid=${charged.bvid}&cid=${view.data.cid}`
+    );
+    const isUpower = !!player.data?.is_upower_exclusive;
+    const subtitleCount = player.data?.subtitle?.subtitles?.length || 0;
+    result.ok = true;
+    result.bvid = charged.bvid;
+    result.title = view.data.title;
+    result.pubdate = view.data.pubdate;
+    result.accessible = isUpower ? subtitleCount > 0 : true;
+    result.accessDetail = isUpower
+      ? `充电专属视频，本账号${subtitleCount > 0 ? '可访问（字幕可用）' : '不可访问（无字幕数据，可能未充电或登录态失效）'}`
+      : '非充电专属，可直接访问';
+
+    console.log(
+      `[charged-check] 发现充电视频 bvid=${result.bvid} 「${result.title}」 ${result.accessDetail}`
+    );
+    return result;
+  } catch (e: any) {
+    result.reason = `检查异常: ${e.message}`;
+    console.warn(`[charged-check] ${result.reason}`);
+    return result;
+  } finally {
+    lastChargedCheck = result;
+  }
+}
+
+// 手动触发（带鉴权，部署后可立即验证）
+app.post('/api/admin/bilibili-charged-check-now', async (req, res) => {
+  const workerSecret = (req.headers['x-worker-secret'] || '').toString().trim();
+  if (!GZH_WORKER_SECRET || workerSecret !== GZH_WORKER_SECRET) {
+    res.status(401).json({ ok: false, error: 'unauthorized' });
+    return;
+  }
+  res.json(await checkLatestChargedVideo());
+});
+
+// 最近一次检查结果（公开只读，无敏感信息，供书签/面板查看）
+app.get('/api/health/charged-check', (_req, res) => {
+  res.json(lastChargedCheck);
+});
+
+setTimeout(() => checkLatestChargedVideo(), 90_000);
+setInterval(checkLatestChargedVideo, CHARGED_CHECK_INTERVAL_MS);
+console.log('[init] B 站充电视频检查任务已启动（每 6 小时）');
