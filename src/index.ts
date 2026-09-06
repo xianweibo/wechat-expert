@@ -1023,10 +1023,13 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 // ---- B 站 UP 主最新充电视频检查（每 6 小时）----
-// 目标 UP: 290663424（有何高见9527）。动态 API 曾于 2026-06 被风控(-352)，
-// 6 小时一次的频率很温和；若仍被封则如实报告，回退手动提供 BVID 的流程。
+// 目标 UP: 290663424（有何高见9527）。
+// 发现路径：动态/search API 被风控(-352/-412)，改用公共 RSS 实例拿最新视频列表
+// （RSSHub 用自己的 IP 抓 B站，不受本机风控影响），再逐个用 view API
+// （阿里云白名单内）查充电标记，发现充电视频后用 player/v2 测本账号可访问性。
 const CHARGED_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const TARGET_UP_UID = 290663424;
+const RSS_BASES = ['https://rss.injahow.cn', 'https://rsshub.rssforever.com'];
 const BILI_REQ_HEADERS = () => ({
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Referer': `https://space.bilibili.com/${TARGET_UP_UID}/`,
@@ -1045,68 +1048,103 @@ interface ChargedCheckResult {
   accessDetail?: string;
 }
 let lastChargedCheck: ChargedCheckResult = { checkedAt: '', ok: false, reason: '尚未运行' };
+let lastChargedFound: ChargedCheckResult | null = null;
+const checkedBvids = new Set<string>();
 
 async function biliJsonGet(url: string): Promise<any> {
   const resp = await fetch(url, { headers: BILI_REQ_HEADERS() });
   return await resp.json();
 }
 
+async function fetchRssFeed(): Promise<{ bvid: string; title: string; pubdate: number }[]> {
+  for (const base of RSS_BASES) {
+    try {
+      const resp = await fetch(`${base}/bilibili/user/video/${TARGET_UP_UID}`, {
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!resp.ok) continue;
+      const xml = await resp.text();
+      const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+      const out: { bvid: string; title: string; pubdate: number }[] = [];
+      for (const it of items) {
+        const bvid = it.match(/(BV[A-Za-z0-9]{10})/)?.[1];
+        const title = it.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/)?.[1] || '';
+        const pubStr = it.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1];
+        const pubdate = pubStr ? new Date(pubStr).getTime() / 1000 : 0;
+        if (bvid) out.push({ bvid, title, pubdate });
+      }
+      if (out.length) return out;
+    } catch (e: any) {
+      console.warn(`[charged-check] RSS ${base} 失败: ${e.message}`);
+    }
+  }
+  return [];
+}
+
 async function checkLatestChargedVideo(): Promise<ChargedCheckResult> {
   const result: ChargedCheckResult = { checkedAt: new Date().toISOString(), ok: false, reason: '' };
   try {
-    // 1) 动态 feed 拿最近视频（含 is_charging_arc 标记）
-    const feed = await biliJsonGet(
-      `https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid=${TARGET_UP_UID}`
-    );
-    if (feed.code !== 0) {
-      result.reason = `动态API不可用 code=${feed.code} msg=${feed.message}（B站风控，回退手动提供BVID）`;
+    const feed = await fetchRssFeed();
+    if (!feed.length) {
+      result.reason = 'RSS 实例均不可用，本轮跳过（发现通道受限于风控，回退手动提供BVID）';
       console.warn(`[charged-check] ${result.reason}`);
       return result;
     }
-    const items: any[] = feed.data?.items || [];
-    let charged: any = null;
-    for (const item of items) {
-      const archive = item?.modules?.module_dynamic?.major?.archive;
-      if (archive?.bvid && archive.is_charging_arc === 1) {
-        charged = archive;
-        break;
-      }
-    }
-    if (!charged) {
+
+    // 只检查本轮没看过的最新视频（每轮最多 8 个，控制 B站 API 用量）
+    const fresh = feed.filter((v) => !checkedBvids.has(v.bvid)).slice(0, 8);
+    if (!fresh.length) {
       result.ok = true;
-      result.reason = '动态列表里没有充电视频';
-      console.log(`[charged-check] ${result.reason}`);
+      result.reason = `无新视频（列表共 ${feed.length} 条，均已检查过）`;
       return result;
     }
 
-    // 2) view API 拿详情（阿里云白名单内），间隔≥2.5s 遵守风控约定
-    await biliSleep(2500);
-    const view = await biliJsonGet(`https://api.bilibili.com/x/web-interface/view?bvid=${charged.bvid}`);
-    if (view.code !== 0) {
-      result.reason = `view API 失败 code=${view.code} msg=${view.message}`;
-      console.warn(`[charged-check] ${result.reason}`);
+    for (const v of fresh) {
+      checkedBvids.add(v.bvid);
+      await biliSleep(2500);
+      let view: any;
+      try {
+        view = await biliJsonGet(`https://api.bilibili.com/x/web-interface/view?bvid=${v.bvid}`);
+      } catch (e: any) {
+        result.reason = `view API 异常: ${e.message}`;
+        console.warn(`[charged-check] ${result.reason}`);
+        return result;
+      }
+      if (view.code === -404) continue; // 视频已删除/不可见
+      if (view.code !== 0) {
+        if (view.code === -412 || view.code === -352 || view.code === -799) {
+          result.reason = `view API 被风控 code=${view.code}，本轮中止`;
+          console.warn(`[charged-check] ${result.reason}`);
+          return result;
+        }
+        continue;
+      }
+      const rights = view.data?.rights || {};
+      const isCharged = rights.is_charging_arc === 1 || rights.ugc_pay === 1;
+      if (!isCharged) continue;
+
+      // 发现充电视频 → 测试本账号可访问性
+      await biliSleep(2500);
+      const player = await biliJsonGet(
+        `https://api.bilibili.com/x/player/v2?bvid=${v.bvid}&cid=${view.data.cid}`
+      );
+      const isUpower = !!player.data?.is_upower_exclusive;
+      const subtitleCount = player.data?.subtitle?.subtitles?.length || 0;
+      result.ok = true;
+      result.bvid = v.bvid;
+      result.title = view.data.title;
+      result.pubdate = view.data.pubdate;
+      result.accessible = isUpower ? subtitleCount > 0 : true;
+      result.accessDetail = isUpower
+        ? `充电专属视频，本账号${subtitleCount > 0 ? '可访问（字幕可用）' : '不可访问（无字幕数据，可能未充电或登录态失效）'}`
+        : '非充电专属，可直接访问';
+      lastChargedFound = { ...result };
+      console.log(`[charged-check] ⚡ 发现充电视频 bvid=${result.bvid}「${result.title}」 ${result.accessDetail}`);
       return result;
     }
-
-    // 3) player/v2 判断本账号能否打开充电专属内容
-    await biliSleep(2500);
-    const player = await biliJsonGet(
-      `https://api.bilibili.com/x/player/v2?bvid=${charged.bvid}&cid=${view.data.cid}`
-    );
-    const isUpower = !!player.data?.is_upower_exclusive;
-    const subtitleCount = player.data?.subtitle?.subtitles?.length || 0;
     result.ok = true;
-    result.bvid = charged.bvid;
-    result.title = view.data.title;
-    result.pubdate = view.data.pubdate;
-    result.accessible = isUpower ? subtitleCount > 0 : true;
-    result.accessDetail = isUpower
-      ? `充电专属视频，本账号${subtitleCount > 0 ? '可访问（字幕可用）' : '不可访问（无字幕数据，可能未充电或登录态失效）'}`
-      : '非充电专属，可直接访问';
-
-    console.log(
-      `[charged-check] 发现充电视频 bvid=${result.bvid} 「${result.title}」 ${result.accessDetail}`
-    );
+    result.reason = `已检查 ${fresh.length} 个新视频，均非充电视频`;
+    console.log(`[charged-check] ${result.reason}`);
     return result;
   } catch (e: any) {
     result.reason = `检查异常: ${e.message}`;
@@ -1129,7 +1167,10 @@ app.post('/api/admin/bilibili-charged-check-now', async (req, res) => {
 
 // 最近一次检查结果（公开只读，无敏感信息，供书签/面板查看）
 app.get('/api/health/charged-check', (_req, res) => {
-  res.json(lastChargedCheck);
+  res.json({
+    last_check: lastChargedCheck,
+    latest_charged_found: lastChargedFound,
+  });
 });
 
 setTimeout(() => checkLatestChargedVideo(), 90_000);
