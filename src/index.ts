@@ -1084,22 +1084,50 @@ async function fetchRssFeed(): Promise<{ bvid: string; title: string; pubdate: n
 async function checkLatestChargedVideo(): Promise<ChargedCheckResult> {
   const result: ChargedCheckResult = { checkedAt: new Date().toISOString(), ok: false, reason: '' };
   try {
+    // ---- 通道1: RSS 拿最新视频列表 ----
     const feed = await fetchRssFeed();
-    if (!feed.length) {
-      result.reason = 'RSS 实例均不可用，本轮跳过（发现通道受限于风控，回退手动提供BVID）';
-      console.warn(`[charged-check] ${result.reason}`);
-      return result;
+    let candidates: { bvid: string; title?: string }[] = [];
+    let channel = '';
+    if (feed.length) {
+      candidates = feed.filter((v) => !checkedBvids.has(v.bvid)).slice(0, 8);
+      channel = `RSS(列表${feed.length}条)`;
     }
 
-    // 只检查本轮没看过的最新视频（每轮最多 8 个，控制 B站 API 用量）
-    const fresh = feed.filter((v) => !checkedBvids.has(v.bvid)).slice(0, 8);
-    if (!fresh.length) {
+    // ---- 通道2(备用): 合集/系列列表（直连可用但数据可能滞后）----
+    if (!candidates.length) {
+      const sss = await biliJsonGet(
+        `https://api.bilibili.com/x/polymer/web-space/seasons_series_list?mid=${TARGET_UP_UID}&page_num=1&page_size=20`
+      );
+      if (sss.code === 0) {
+        const lists = sss.data?.items_lists || {};
+        const all: any[] = [];
+        for (const key of ['seasons_list', 'series_list']) {
+          for (const it of lists[key] || []) {
+            for (const a of it?.archives || []) all.push(a);
+          }
+        }
+        candidates = all
+          .filter((a) => a?.bvid && (a.ugc_pay === 1 || a.is_charging_arc === 1))
+          .sort((a, b) => (b.pubdate || 0) - (a.pubdate || 0))
+          .slice(0, 3)
+          .map((a) => ({ bvid: a.bvid, title: a.title }));
+        channel = '合集列表(直连)';
+      }
+    }
+
+    if (!candidates.length) {
       result.ok = true;
-      result.reason = `无新视频（列表共 ${feed.length} 条，均已检查过）`;
+      result.reason = channel
+        ? `${channel}：本轮无新视频或无充电视频`
+        : 'RSS 实例均不可用且合集内无充电视频（发现通道受限于风控，回退手动提供BVID）';
+      if (!channel) console.warn(`[charged-check] ${result.reason}`);
+      else console.log(`[charged-check] ${result.reason}`);
       return result;
     }
 
-    for (const v of fresh) {
+    // ---- 逐个检查：view 拿 cid，player/v2 是充电标记与可访问性的权威来源 ----
+    for (const v of candidates) {
+      if (checkedBvids.has(v.bvid)) continue;
       checkedBvids.add(v.bvid);
       await biliSleep(2500);
       let view: any;
@@ -1119,17 +1147,17 @@ async function checkLatestChargedVideo(): Promise<ChargedCheckResult> {
         }
         continue;
       }
-      const rights = view.data?.rights || {};
-      const isCharged = rights.is_charging_arc === 1 || rights.ugc_pay === 1;
-      if (!isCharged) continue;
-
-      // 发现充电视频 → 测试本账号可访问性
       await biliSleep(2500);
       const player = await biliJsonGet(
         `https://api.bilibili.com/x/player/v2?bvid=${v.bvid}&cid=${view.data.cid}`
       );
+      const rights = view.data?.rights || {};
       const isUpower = !!player.data?.is_upower_exclusive;
       const subtitleCount = player.data?.subtitle?.subtitles?.length || 0;
+      const isCharged =
+        isUpower || rights.is_charging_arc === 1 || rights.ugc_pay === 1;
+      if (!isCharged) continue;
+
       result.ok = true;
       result.bvid = v.bvid;
       result.title = view.data.title;
@@ -1139,11 +1167,13 @@ async function checkLatestChargedVideo(): Promise<ChargedCheckResult> {
         ? `充电专属视频，本账号${subtitleCount > 0 ? '可访问（字幕可用）' : '不可访问（无字幕数据，可能未充电或登录态失效）'}`
         : '非充电专属，可直接访问';
       lastChargedFound = { ...result };
-      console.log(`[charged-check] ⚡ 发现充电视频 bvid=${result.bvid}「${result.title}」 ${result.accessDetail}`);
+      console.log(
+        `[charged-check] ⚡ 发现充电视频 bvid=${result.bvid}「${result.title}」 ${result.accessDetail} [来源:${channel}]`
+      );
       return result;
     }
     result.ok = true;
-    result.reason = `已检查 ${fresh.length} 个新视频，均非充电视频`;
+    result.reason = `已检查本轮新视频（${channel}），均非充电视频`;
     console.log(`[charged-check] ${result.reason}`);
     return result;
   } catch (e: any) {
