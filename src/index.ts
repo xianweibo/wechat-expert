@@ -1164,7 +1164,7 @@ async function checkLatestChargedVideo(): Promise<ChargedCheckResult> {
       result.pubdate = view.data.pubdate;
       result.accessible = isUpower ? subtitleCount > 0 : true;
       result.accessDetail = isUpower
-        ? `充电专属视频，本账号${subtitleCount > 0 ? '可访问（字幕可用）' : '不可访问（无字幕数据，可能未充电或登录态失效）'}`
+        ? `充电专属视频，本账号${subtitleCount > 0 ? '可访问（字幕可用）' : '无AI字幕数据（老视频常见，与充电权限无关）'}`
         : '非充电专属，可直接访问';
       lastChargedFound = { ...result };
       console.log(
