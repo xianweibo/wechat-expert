@@ -79,3 +79,9 @@ commit_*.ps1
 
 # ===== 本地归档（历史临时文件，不入库）=====
 _archive/
+
+# ===== ASR 一次性探针脚本 =====
+_probe_*.py
+_test_asr*.py
+_probe_flv.py
+_probe_playurl.py
