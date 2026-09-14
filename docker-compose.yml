@@ -6,25 +6,19 @@ services:
       dockerfile: Dockerfile
     container_name: gzh-expert-app
     restart: unless-stopped
-    ports:
-      # 只绑定宿主机回环：公网无法直连，宿主机上的宝塔 nginx 通过
-      # 127.0.0.1:39800 反代访问；外部操作走 SSH 隧道或域名(HTTPS)
-      - "127.0.0.1:39800:3000"
+    # host 网络: 容器内 127.0.0.1 直接等于宿主机, 方便调用 frp visitor 暴露的
+    # NAS ASR 服务(127.0.0.1:41092)而无需在容器网络层做端口映射
+    network_mode: host
     env_file:
       - .env
     volumes:
       - ./logs:/app/logs
       - ./data/uploads:/app/uploads
-      # .env 绑定挂载：配合 .dockerignore（不打入镜像），扫码登录写 .env
-      # 时直接落盘到宿主机，重启/重建容器均不丢失
       - ./.env:/app/.env
-      # 语言风格档案（NAS refresh_style.sh 产物，经本地中转拷贝而来）
       - ./style_summary.txt:/app/style_summary.txt:ro
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - gzh-network
 
   # --- PostgreSQL 数据库 ---
   postgres:
