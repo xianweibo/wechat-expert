@@ -9,6 +9,10 @@ services:
     # host 网络: 容器内 127.0.0.1 直接等于宿主机, 方便调用 frp visitor 暴露的
     # NAS ASR 服务(127.0.0.1:41092)而无需在容器网络层做端口映射
     network_mode: host
+    # 容器内直接监听 39800（host 网络下不做 docker 端口映射, 旧 compose 的
+    # "127.0.0.1:39800:3000" 在 host 网络下失效, 需让 app 自身 listen 39800）
+    environment:
+      - PORT=39800
     env_file:
       - .env
     volumes:
