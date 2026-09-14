@@ -586,12 +586,14 @@ async function biliSubtitle(bvid: string, cid: number, sessdata: string, biliJct
     const isUgcPayPreview = !!data.is_ugc_pay_preview;
     const loginMid = data.login_mid || 0;
 
+    // [fix-2026-09-14] 充电专属视频不应一律跳过（用户实测有充电账号能拿到有效字幕），
+    // 只要 subtitles 列表非空就尝试拿, 靠后续长度校验过滤水印/CDN 错配
     if (subtitles.length === 0) {
         return { subtitleText: '', subtitles: [], needLoginSubtitle, isUpowerExclusive, isUgcPayPreview, loginMid };
     }
 
-    // 优先选 AI 字幕（ai_type=1），否则选第一个
-    const subInfo = subtitles.find((s: any) => s.ai_type === 1) || subtitles[0];
+    // 优先选人工字幕（ai_type=0），AI 字幕作兜底
+    const subInfo = subtitles.find((s: any) => s.ai_type === 0) || subtitles[0];
     let subUrl: string = subInfo.subtitle_url || '';
     if (!subUrl) {
         return { subtitleText: '', subtitles, needLoginSubtitle, isUpowerExclusive, isUgcPayPreview, loginMid };
@@ -608,7 +610,15 @@ async function biliSubtitle(bvid: string, cid: number, sessdata: string, biliJct
         const text = (item.content || item.i || '').trim();
         if (text) lines.push(text);
     }
-    return { subtitleText: lines.join('\n'), subtitles, needLoginSubtitle, isUpowerExclusive, isUgcPayPreview, loginMid };
+    const subtitleText = lines.join('\n');
+
+    // [fix-2026-09-14] 字幕太短（<200字）说明不是正文，是片尾水印/推广
+    if (subtitleText.length < 200) {
+        console.log(`[bilibili-subtitle] subtitle too short (${subtitleText.length} chars), likely watermark/promo, discarding (bvid=${bvid})`);
+        return { subtitleText: '', subtitles, needLoginSubtitle, isUpowerExclusive, isUgcPayPreview, loginMid };
+    }
+
+    return { subtitleText, subtitles, needLoginSubtitle, isUpowerExclusive, isUgcPayPreview, loginMid };
 }
 
 router.post('/bilibili-subtitle', async (req: Request, res: Response) => {
@@ -626,6 +636,13 @@ router.post('/bilibili-subtitle', async (req: Request, res: Response) => {
     try {
         await sleep(2500); // 风控间隔 ≥ 2s
         const result = await biliSubtitle(bvid, cid, sessdata, biliJct);
+        // 详细原因: list空/list有但下载到的是水印/或upower_exclusive 等, 便于 NAS 端区分降级原因
+        let reason = '';
+        if (result.subtitles.length === 0) {
+            reason = result.isUpowerExclusive ? 'no_subtitles_upower' : 'no_subtitles';
+        } else if (!result.subtitleText) {
+            reason = 'subtitle_too_short_or_unavailable';
+        }
         res.json({
             ok: true,
             bvid,
@@ -637,6 +654,7 @@ router.post('/bilibili-subtitle', async (req: Request, res: Response) => {
             is_ugc_pay_preview: result.isUgcPayPreview,
             login_mid: result.loginMid,
             subtitles: result.subtitles,
+            reason,
         });
     } catch (e: any) {
         res.status(500).json({ ok: false, error: e.message });
