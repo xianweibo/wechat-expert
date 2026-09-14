@@ -6,8 +6,12 @@ import { URL } from 'url';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { initAsrCache, transcribeViaAsr } from './asr';
 
 const router = Router();
+
+// 启动时初始化 ASR 缓存层（连 DB 失败自动降级为纯内存）
+void initAsrCache();
 
 const APP_ID = process.env.WECHAT_APP_ID || 'wx567a639466e247cd';
 const API_BASE = 'https://api.weixin.qq.com/cgi-bin';
@@ -638,10 +642,24 @@ router.post('/bilibili-subtitle', async (req: Request, res: Response) => {
         const result = await biliSubtitle(bvid, cid, sessdata, biliJct);
         // 详细原因: list空/list有但下载到的是水印/或upower_exclusive 等, 便于 NAS 端区分降级原因
         let reason = '';
+        let asrUsed = false;
         if (result.subtitles.length === 0) {
             reason = result.isUpowerExclusive ? 'no_subtitles_upower' : 'no_subtitles';
         } else if (!result.subtitleText) {
             reason = 'subtitle_too_short_or_unavailable';
+        }
+
+        // ASR 兜底：字幕空/太短/充电专属时, 拉音频转文字
+        // NAS whisper.cpp 服务地址(经腾讯STCP visitor 在阿里云侧 127.0.0.1:41092)
+        const ASR_URL = process.env.ASR_URL || 'http://127.0.0.1:41092';
+        if (!result.subtitleText && process.env.ASR_ENABLED !== 'false') {
+            const asrResult = await transcribeViaAsr(bvid, cid, ASR_URL);
+            if (asrResult && asrResult.text && asrResult.text.length >= 200) {
+                result.subtitleText = asrResult.text;
+                asrUsed = true;
+                reason = `asr_${reason || 'no_subtitles'}`;
+                console.log(`[bilibili-subtitle] ASR fallback success bvid=${bvid} chars=${asrResult.text.length} transcribe_s=${asrResult.transcribe_seconds} cache=${asrResult.fromCache}`);
+            }
         }
         res.json({
             ok: true,
@@ -655,6 +673,7 @@ router.post('/bilibili-subtitle', async (req: Request, res: Response) => {
             login_mid: result.loginMid,
             subtitles: result.subtitles,
             reason,
+            asr_used: asrUsed,
         });
     } catch (e: any) {
         res.status(500).json({ ok: false, error: e.message });

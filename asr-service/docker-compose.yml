@@ -1,0 +1,23 @@
+services:
+  whisper-asr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gzh-whisper-asr:latest
+    container_name: gzh-whisper-asr
+    restart: unless-stopped
+    network_mode: host
+    # whisper-cli + 模型从挂载卷来
+    volumes:
+      - /vol2/1000/docker_related/asr-service/models:/opt/models:ro
+      - /vol2/1000/docker_related/asr-service/whisper-cli:/opt/whisper/whisper-cli:ro
+    environment:
+      - MODEL_PATH=/opt/models/ggml-small.bin
+      - WHISPER_BIN=/opt/whisper/whisper-cli
+      - LANG=zh
+      - PORT=41092
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
