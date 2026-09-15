@@ -649,16 +649,17 @@ router.post('/bilibili-subtitle', async (req: Request, res: Response) => {
             reason = 'subtitle_too_short_or_unavailable';
         }
 
-        // ASR 兜底：字幕空/太短/充电专属时, 拉音频转文字
-        // NAS whisper.cpp 服务地址(经腾讯STCP visitor 在阿里云侧 127.0.0.1:41092)
+        // ASR 兜底：字幕空/太短时, 拉音频转文字
+        // ASR_FORCE=1 时无视字幕有无强制调 ASR(用于一次性实测验证)
         const ASR_URL = process.env.ASR_URL || 'http://127.0.0.1:41092';
-        if (!result.subtitleText && process.env.ASR_ENABLED !== 'false') {
+        const asrForce = process.env.ASR_FORCE === '1';
+        if ((!result.subtitleText || asrForce) && process.env.ASR_ENABLED !== 'false') {
             const asrResult = await transcribeViaAsr(bvid, cid, ASR_URL);
             if (asrResult && asrResult.text && asrResult.text.length >= 200) {
                 result.subtitleText = asrResult.text;
                 asrUsed = true;
-                reason = `asr_${reason || 'no_subtitles'}`;
-                console.log(`[bilibili-subtitle] ASR fallback success bvid=${bvid} chars=${asrResult.text.length} transcribe_s=${asrResult.transcribe_seconds} cache=${asrResult.fromCache}`);
+                reason = `asr_${reason || 'no_subtitles'}${asrForce ? '_forced' : ''}`;
+                console.log(`[bilibili-subtitle] ASR fallback success bvid=${bvid} chars=${asrResult.text.length} transcribe_s=${asrResult.transcribe_seconds} cache=${asrResult.fromCache} force=${asrForce}`);
             }
         }
         res.json({
