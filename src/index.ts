@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import * as fs from 'fs';
 import mpProxy from './mp_proxy';
 import { initDraftStore, persistDraftRecord } from './db';
+import { sanitizeText, SANITIZE_RULES } from './sanitize';
 
 // override: 容器 env_file 的值在容器创建时冻结，扫码登录后写入的新 cookie
 // 依赖 dotenv 在进程重启时覆盖旧值，否则 docker restart 后仍是过期登录态
@@ -256,76 +257,7 @@ async function minimaxChat(prompt: string, maxTokens: number = 8192, timeout: nu
   }
 }
 
-// ---- 内容安全消毒（微信审核高危词硬替换） ----
-// 三大类:
-//   A. 操盘指令/仓位建议（公众号严禁）
-//   B. 绝对收益承诺/必涨必跌（违反广告法+公众号运营规范）
-//   C. 煽动性/恐慌性词 + 地缘高敏词
-// 命中数会写入日志，>10 应排查模型输出
-const SANITIZE_RULES: Array<[RegExp, string]> = [
-  // === A. 操盘指令/仓位建议 ===
-  [ /(\d{3,5})\s*(最多最多)?的?压力位/g, '$1一带的历史阻力区域' ],
-  [ /(\d{3,5})\s*的?支撑位/g, '$1一带的历史支撑区域' ],
-  [ /切记[，。]?\s*(空|多|加仓|减仓|清仓|平仓|建仓|满仓)/g, '（历史数据记录，非操作建议）' ],
-  [ /(空|多|加仓|减仓|清仓|平仓|建仓|满仓)[，,]?\s*或\s*(\d)\s*层/g, '（仓位仅为历史回测记录）' ],
-  [ /或\s*(\d)\s*层/g, '（仓位为历史回测记录）' ],
-  [ /(满仓|清仓|all\s?in)/gi, '重仓操作（历史记录）' ],
-  [ /逢高减仓|逢低加仓|高抛低吸|止损位/g, '（历史回测数据）' ],
-  [ /第[一二三四5]\s*目标位|看到\d{3,5}\s*点/g, '（历史区间参考）' ],
-  [ /上车了|抄底了|上车机会|加仓机会/g, '（按个人判断）' ],
-  [ /不要错过|不容错过|最后机会|抓紧时间上车/g, '（个人研究参考）' ],
-  [ /可以买|可以卖|值得买|值得入手/g, '（历史数据观察）' ],
-  [ /上方阻力\s*位?[\d.]+|下方支撑\s*位?[\d.]+/g, '对应历史阻力/支撑区域' ],
-
-  // === B. 绝对收益承诺（违反广告法 + 公众号运营规范）===
-  [ /稳赚不赔|必赚|包赚|保本收益|无风险收益/g, '（历史回测记录）' ],
-  [ /必涨|必跌|必崩|必翻倍|必翻番|翻倍牛/g, '（历史区间参考）' ],
-  [ /年化(\d{1,3})[%％]以上?稳[定不]?赚|年化(\d{1,3})[%％]?稳[定不]?亏/g, '历史年化参考区间' ],
-  [ /一定会涨|一定会跌|肯定涨|肯定跌|一定[跌涨翻]到\d/g, '（历史概率分布）' ],
-  [ /稳赚|躺赚|躺赢|无脑买|闭眼买|梭哈/g, '（历史回测记录）' ],
-  [ /收益(\d{2,4})[%％]|盈利(\d{2,4})[%％]/g, '历史收益区间参考' ],
-
-  // === C. 煽动/恐慌 + 地缘高敏 ===
-  [ /去美元化/g, '国际货币格局多元化' ],
-  [ /本币结算/g, '非美元货币结算' ],
-  [ /替代支付系统/g, '跨境支付新渠道' ],
-  [ /关税战/g, '关税调整' ],
-  [ /脱钩/g, '供应链调整' ],
-  [ /中美对抗/g, '国际经贸博弈' ],
-  [ /中俄/g, '相关国家' ],
-  [ /崩给你看/g, '面临较大调整压力' ],
-  [ /雪崩/g, '快速走弱' ],
-  [ /崩盘/g, '深度调整' ],
-  [ /死给你看/g, '面临出清压力' ],
-  [ /完了/g, '承压明显' ],
-  [ /刺破泡沫/g, '挤压估值泡沫' ],
-  [ /叫你好看/g, '带来调整压力' ],
-  [ /血洗|屠杀式|关门打狗|血流成河/g, '市场出现明显调整' ],
-  [ /韭菜被割|割韭菜|庄家出货/g, '市场参与者的盈亏分布' ],
-  [ /违规违法|违法犯罪/g, '（合规问题请咨询专业人士）' ],
-  [ /内幕|老鼠仓|坐庄/g, '（合规提示：请通过正规渠道获取信息）' ],
-
-  // === D. 荐股暗示/具体个股指令 ===
-  [ /强力推荐|重仓推荐|主力关注|主力建仓/g, '（历史持仓数据观察）' ],
-  [ /即将拉升|即将爆发|蓄势待发|底部启动|反转在即/g, '（历史走势特征）' ],
-  [ /目标价\d+|至少涨\d+%?至少跌\d+%/g, '（历史区间参考）' ],
-  [ /主力资金|北向资金.*净(流入|流出)|南向资金.*净(流入|流出)/g, '资金流向数据' ],
-  [ /机构(看好|看空|买入|卖出|加仓|减仓)/g, '机构持仓变动情况' ],
-];
-
-function sanitizeText(text: string): string {
-  if (!text) return text;
-  let count = 0;
-  for (const [pattern, repl] of SANITIZE_RULES) {
-    text = text.replace(pattern, (m, ...args) => {
-      count++;
-      // $1/$2 反向引用在函数形式下需手动展开
-      return repl.replace(/\$(\d)/g, (_, d) => (args[Number(d) - 1] !== undefined ? String(args[Number(d) - 1]) : ''));
-    });
-  }
-  if (count) console.log(`[sanitize] replaced ${count} sensitive hits`);
-  return text;
-}
+// sanitizeText / SANITIZE_RULES 已抽到 src/sanitize.ts, Node 与 NAS Python 端共用
 
 async function generateSummary(title: string, desc: string, subtitle: string): Promise<string> {
   let styleSection = '';
@@ -753,12 +685,14 @@ function buildHtml(summary: string, fyiLinks: string[], title: string): string {
     '<p>---</p>' +
     '<p></p>';
 
-  // 底部声明块
+  // 底部声明块（含 4 行合规外衣，NAS 模板一致）
   const bottom =
     '<p></p>' +
     '<p>---</p>' +
     '<p></p>' +
-    '<p>Make you greate again！</p>' +
+    '<p>Make you become greate again！</p>' +
+    '<p>我每天都有亲身服用，感觉整个人的精气神都好了很多</p>' +
+    '<p>当然可能不同人体质不一样</p>' +
     '<p></p>' +
     '<p>=======</p>' +
     '<p>=</p>' +
