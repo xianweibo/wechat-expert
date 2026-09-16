@@ -622,6 +622,38 @@ async function biliSubtitle(bvid: string, cid: number, sessdata: string, biliJct
         return { subtitleText: '', subtitles, needLoginSubtitle, isUpowerExclusive, isUgcPayPreview, loginMid };
     }
 
+    // [fix-2026-09-17] B站 CDN 偶尔把别的视频的字幕配错(返回 2000+ 字但不是这个视频的内容).
+    // 用 B站官方 view API 拿真实标题, 在字幕里查标题里的中文关键词; 命中 < 20% 视为错位, 清空.
+    // 注意: 此处有 +2.5s 风控间隔, 仅在字幕长度 200-3000(易错配区间)时校验, 避免长视频也拖累
+    if (subtitleText.length < 3000) {
+        try {
+            await sleep(2500);
+            const vResp = await fetch(
+                `https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`,
+                { headers: { 'User-Agent': 'Mozilla/5.0' } }
+            );
+            const vJson: any = await vResp.json();
+            const realTitle: string = vJson?.data?.title || '';
+            // 提取长度≥2的中文/英文关键词
+            const titleWords: string[] = [];
+            const titleAscii = realTitle.match(/[A-Za-z0-9]{3,}/g) || [];
+            const titleZh = realTitle.match(/[\u4e00-\u9fa5]{2,}/g) || [];
+            titleWords.push(...titleAscii, ...titleZh);
+            if (titleWords.length > 0) {
+                const hits = titleWords.filter((w) => subtitleText.includes(w)).length;
+                const hitRate = hits / titleWords.length;
+                if (hitRate < 0.2) {
+                    console.log(`[bilibili-subtitle] subtitle mismatch with title (hit ${hits}/${titleWords.length}, rate ${hitRate.toFixed(2)}) for ${bvid}, discarding. real_title="${realTitle.slice(0,40)}"`);
+                    return { subtitleText: '', subtitles, needLoginSubtitle, isUpowerExclusive, isUgcPayPreview, loginMid };
+                }
+                console.log(`[bilibili-subtitle] subtitle matched title (${hits}/${titleWords.length}, rate ${hitRate.toFixed(2)}) for ${bvid}`);
+            }
+        } catch (e: any) {
+            // 校验失败不阻塞流程, 继续返回字幕
+            console.warn(`[bilibili-subtitle] title-check failed for ${bvid}: ${e.message}`);
+        }
+    }
+
     return { subtitleText, subtitles, needLoginSubtitle, isUpowerExclusive, isUgcPayPreview, loginMid };
 }
 
