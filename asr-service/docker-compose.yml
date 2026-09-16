@@ -7,13 +7,14 @@ services:
     container_name: gzh-whisper-asr
     restart: unless-stopped
     network_mode: host
-    # whisper-cli + 模型从挂载卷来
+    # 把整个 whisper.cpp build 树挂载, 解决 libwhisper.so / libggml.so 等动态链接依赖
     volumes:
       - /vol2/1000/docker_related/asr-service/models:/opt/models:ro
-      - /vol2/1000/docker_related/asr-service/whisper-cli:/opt/whisper/whisper-cli:ro
+      - /vol2/1000/docker_related/asr-service/whisper.cpp-1.8.2/build:/opt/whisper:ro
     environment:
       - MODEL_PATH=/opt/models/ggml-small.bin
-      - WHISPER_BIN=/opt/whisper/whisper-cli
+      - WHISPER_BIN=/opt/whisper/bin/whisper-cli
+      - LD_LIBRARY_PATH=/opt/whisper/src:/opt/whisper/ggml/src
       - LANG=zh
       - PORT=41092
     logging:
