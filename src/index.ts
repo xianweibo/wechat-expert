@@ -152,13 +152,13 @@ async function fetchBilibiliMeta(bvid: string): Promise<{ title: string; desc: s
 async function fetchBilibiliSubtitle(bvid: string, cid: number): Promise<{ text: string; asrUsed: boolean; subtitleChars: number }> {
   if (!cid) {
     console.warn(`[subtitle] cid 为空，跳过 bvid=${bvid}`);
-    return '';
+    return { text: '', asrUsed: false, subtitleChars: 0 };
   }
   try {
     const resp = await callMpProxy('bilibili-subtitle', { bvid, cid: Number(cid) });
     if (!resp || !resp.ok) {
       console.warn(`[subtitle] mp_proxy 返回失败: ${resp && resp.error}`);
-      return '';
+      return { text: '', asrUsed: false, subtitleChars: 0 };
     }
     const text = resp.subtitle_text || '';
     const needLogin = resp.need_login_subtitle;
