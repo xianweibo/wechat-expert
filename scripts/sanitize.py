@@ -101,7 +101,17 @@ SANITIZE_RULES = [
 
 
 def sanitize_text(text):
-    """对文本执行所有消毒规则, 返回替换后文本+命中数。"""
+    """对文本执行所有消毒规则, 仅返回替换后文本 (与 Node 端 sanitizeText 签名一致)。
+    需要命中数请用 sanitize_text_with_count。"""
+    if not text:
+        return text
+    for pattern, repl in SANITIZE_RULES:
+        text = re.sub(pattern, repl, text)
+    return text
+
+
+def sanitize_text_with_count(text):
+    """返回 (消毒后文本, 命中数)。调试/审计场景使用。"""
     if not text:
         return text, 0
     count = 0
@@ -116,10 +126,10 @@ def sanitize_text(text):
 if __name__ == '__main__':
     # 简单自测 (覆盖规则覆盖到的 4 类词)
     test = "今天压力位3500, 抄底了, 必涨到4000! 梭哈入场"
-    out, n = sanitize_text(test)
-    print(f"命中 {n} 次\n原文: {test}\n消毒: {out}")
-    assert "压力位" not in out, "压力位未消毒"
-    assert "抄底" not in out, "抄底未消毒"
-    assert "必涨" not in out, "必涨未消毒"
-    assert "梭哈" not in out, "梭哈未消毒"
+    out = sanitize_text(test)
+    out2, n = sanitize_text_with_count(test)
+    print(f"原文: {test}\nsanitize_text 返回: {out!r}\nsanitize_text_with_count: hits={n} out={out2!r}")
+    assert isinstance(out, str), "sanitize_text 必须返回 str"
+    assert out == out2, "两个函数应返回相同文本"
+    assert "压力位" not in out and "抄底" not in out and "必涨" not in out and "梭哈" not in out, "未消毒"
     print("✓ 自测通过")
