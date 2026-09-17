@@ -149,7 +149,7 @@ async function fetchBilibiliMeta(bvid: string): Promise<{ title: string; desc: s
   };
 }
 
-async function fetchBilibiliSubtitle(bvid: string, cid: number): Promise<string> {
+async function fetchBilibiliSubtitle(bvid: string, cid: number): Promise<{ text: string; asrUsed: boolean; subtitleChars: number }> {
   if (!cid) {
     console.warn(`[subtitle] cid 为空，跳过 bvid=${bvid}`);
     return '';
@@ -163,8 +163,9 @@ async function fetchBilibiliSubtitle(bvid: string, cid: number): Promise<string>
     const text = resp.subtitle_text || '';
     const needLogin = resp.need_login_subtitle;
     const isUpower = resp.is_upower_exclusive;
+    const asrUsed = !!resp.asr_used;
     if (text) {
-      console.log(`[subtitle] 拿到字幕 ${text.length} chars (bvid=${bvid})`);
+      console.log(`[subtitle] 拿到字幕 ${text.length} chars (bvid=${bvid}, asr=${asrUsed})`);
     } else if (isUpower) {
       console.warn(`[subtitle] 字幕为空，视频是充电专属（账号未充电或 SESSDATA 无效）bvid=${bvid}`);
     } else if (needLogin) {
@@ -172,10 +173,10 @@ async function fetchBilibiliSubtitle(bvid: string, cid: number): Promise<string>
     } else {
       console.log(`[subtitle] 字幕为空（视频无字幕）bvid=${bvid}`);
     }
-    return text;
+    return { text, asrUsed, subtitleChars: text.length };
   } catch (e: any) {
     console.warn(`[subtitle] 拿字幕异常 bvid=${bvid}: ${e.message}`);
-    return '';
+    return { text: '', asrUsed: false, subtitleChars: 0 };
   }
 }
 
@@ -759,9 +760,10 @@ app.post('/api/bilibili/summary', summaryLimiter, async (req, res) => {
       console.log(`[summary] 标题: ${title}, cid: ${cid}`);
 
       console.log('[summary] 2. 拉取字幕...');
-      const subtitle = await fetchBilibiliSubtitle(bvid, cid);
+      const subResult = await fetchBilibiliSubtitle(bvid, cid);
+      const subtitle = subResult.text;
       if (subtitle) {
-        console.log(`[summary] 字幕长度: ${subtitle.length}`);
+        console.log(`[summary] 字幕长度: ${subtitle.length} (asr=${subResult.asrUsed})`);
       } else {
         console.log('[summary] 字幕为空，降级用 title+desc');
       }
@@ -794,7 +796,11 @@ app.post('/api/bilibili/summary', summaryLimiter, async (req, res) => {
 
       console.log(`[summary] 完成 media_id=${mediaId}`);
       if (dedupKey) rememberDraft(dedupKey, mediaId, draftTitle, 'bvid');
-      res.json({ success: true, media_id: mediaId });
+      // data_source: subtitle(直接拿到字幕) / asr(字幕空, NAS whisper 转写) / degraded(没字幕也没 ASR, title+desc)
+      const dataSource = subtitle
+        ? (subResult.asrUsed ? 'asr' : 'subtitle')
+        : 'degraded';
+      res.json({ success: true, media_id: mediaId, data_source: dataSource });
     } catch (e: any) {
       console.error('[summary] 失败:', e.message);
       res.status(500).json({ success: false, message: e.message });
